@@ -1,0 +1,63 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.760422681951312,
+  "hr_at_k": 0.9583934044575444,
+  "recall_at_k": 0.9583934044575444,
+  "mrr_at_k": 0.6961110123698628,
+  "mean_rank": 2.961057892544773,
+  "run_id": "R10_ltr_stream",
+  "model": "lightgbm_lambdarank_stream",
+  "seed": 20260907,
+  "throughput_rps": 45049.197772362364,
+  "latency_ms": 2.2419933094116806,
+  "val_ndcg_at_k": 0.7820116280778951,
+  "n_features": 16,
+  "best_iteration": 289,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": {
+    "seed": 20260907,
+    "positive_threshold": 4.0,
+    "n_users": 200948,
+    "n_items": 71411,
+    "max_items": 20000,
+    "n_graph_items": 20000,
+    "top_k": 50,
+    "pagerank_iters": 20,
+    "damping": 0.85,
+    "lpa_iters": 5,
+    "community_method": "louvain",
+    "community_resolution": 5.0,
+    "n_communities": 70,
+    "graph_item_positive_coverage": 0.9961018562316895,
+    "topk_nnz": 1000000
+  },
+  "stream": {
+    "mode": "ratio",
+    "features": [
+      "user_activity_ratio_7_30",
+      "user_activity_ratio_30_90",
+      "movie_recent_ratio_7_30"
+    ]
+  },
+  "significance": {
+    "mean_diff": 0.14497801446693853,
+    "se": 0.0006438940091340996,
+    "ci_low": 0.14377737662121778,
+    "ci_high": 0.14627707660889308,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.6154446674843735,
+    "model_ndcg": 0.760422681951312,
+    "lift": 1.2355662858523664
+  }
+}

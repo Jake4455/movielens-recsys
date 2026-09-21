@@ -1,0 +1,8 @@
+{
+  "run_id": "R07_ltr_content",
+  "model": "lightgbm_lambdarank_content",
+  "seed": 20260907,
+  "ndcg_at10": 0.7068889591289388,
+  "generated_at": "2026-09-18T13:00:35.368781+00:00",
+  "n_rows": 1872780
+}

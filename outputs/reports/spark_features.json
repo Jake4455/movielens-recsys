@@ -1,0 +1,18 @@
+{
+  "elapsed_s": 34.723516900000504,
+  "stats": {
+    "movie_stats_rows": 71411,
+    "user_stats_rows": 200948,
+    "user_genre_rows": 3213100
+  },
+  "checks": {
+    "movie_count": {
+      "rows": 87585,
+      "match_share": 1.0
+    },
+    "user_count": {
+      "rows": 200948,
+      "match_share": 1.0
+    }
+  }
+}

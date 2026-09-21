@@ -1,0 +1,9 @@
+run_id,model,recall_at10,ndcg_at10,lift_vs_pop,ci_low,throughput_rps,latency_ms,seed,config_path,timestamp
+R00_pop,most_popular_train,0.886004,0.615445,1.0000,0.0000,1049165.95,0.0963,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\final.yaml,2026-09-16T07:50:13.418673+00:00
+R03_als,spark_als,0.564327,0.294966,0.4793,-0.322175,56876.11,1.7758,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\final.yaml,2026-09-16T07:56:57.844732+00:00
+R07_ltr_content,lightgbm_lambdarank_content,0.932683,0.706889,1.1486,0.090321,109822.25,0.9197,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\final.yaml,2026-09-18T13:00:35.368781+00:00
+R08_ltr_graph,lightgbm_lambdarank_graph,0.934071,0.708547,1.1513,0.091963,93400.76,1.0814,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\graph.yaml,2026-09-18T13:05:01.208699+00:00
+R10_ltr_stream,lightgbm_lambdarank_stream,0.958393,0.760423,1.2356,0.143777,45049.20,2.2420,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\stream.yaml,2026-09-18T13:12:55.451203+00:00
+R09_hardneg,lightgbm_lambdarank_hardneg,0.955067,0.758463,1.2324,0.141825,47625.09,2.1207,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\hardneg.yaml,2026-09-18T13:20:20.595733+00:00
+R11_ltr_realneg,lightgbm_lambdarank_realneg,0.951414,0.736182,1.1962,0.119275,58735.39,1.7196,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\realneg.yaml,2026-09-18T13:26:27.668117+00:00
+R06_ltr_f1,lightgbm_lambdarank_f1,0.932699,0.707253,1.1492,0.090700,117563.22,0.8591,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\f1.yaml,2026-09-18T13:41:50.957397+00:00

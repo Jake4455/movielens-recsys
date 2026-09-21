@@ -1,0 +1,96 @@
+seed: 20260907
+
+project:
+  name: movielens-recsys-f1
+
+paths:
+  raw_dir: data/ml-32m
+  processed_dir: data/processed
+  outputs_dir: outputs
+  logs_dir: outputs/logs
+  reports_dir: outputs/reports
+
+data:
+  files:
+    ratings: ratings.csv
+    movies: movies.csv
+    tags: tags.csv
+    links: links.csv
+  positive_threshold: 4.0
+  split:
+    train_ratio: 0.8
+    val_ratio: 0.1
+    test_ratio: 0.1
+  candidates:
+    num_negatives: 100
+    positive_pick: random
+    negative_scope: per_user
+    exclude:
+      positive: true
+      user_train_val: true
+      user_test: true
+    source: local
+    teacher_file: null
+  dev:
+    max_users: null
+
+baseline:
+  popularity:
+    positive_only: false
+
+features:
+  bayes_rating: false
+  weighted_genre: false
+  weighted_genre_threshold: 3.5
+
+spark:
+  master: local[8]
+  driver_memory: 8g
+  shuffle_partitions: 64
+  local_dir: spark-tmp
+  hadoop_home: tools/hadoop
+  log_level: WARN
+
+als:
+  rank: 64
+  max_iter: 10
+  reg_param: 0.1
+  implicit_prefs: false
+  nonnegative: true
+
+ltr:
+  run_id: R06_ltr_f1
+  model_name: lightgbm_lambdarank_f1
+  max_train_users: 100000
+  valid_users: 20000
+  num_negatives: 100
+  hard_ratio: 0.0
+  hard_pool_size: 5000
+  num_boost_round: 300
+  early_stopping: 50
+  log_every: 50
+  params:
+    objective: lambdarank
+    metric: ndcg
+    ndcg_eval_at: [10]
+    lambdarank_truncation_level: 10
+    learning_rate: 0.05
+    num_leaves: 63
+    min_data_in_leaf: 100
+    feature_fraction: 0.9
+    bagging_fraction: 0.9
+    bagging_freq: 1
+    num_threads: 8
+    deterministic: true
+    force_row_wise: true
+
+eval:
+  k: 10
+  bootstrap:
+    n_boot: 1000
+    seed: 20260907
+    chunk: 25
+
+serving:
+  top_k: 10
+  columns: [userId, rank, movieId, score]

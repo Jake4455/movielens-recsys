@@ -1,0 +1,40 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.7072532684559931,
+  "hr_at_k": 0.9326989822616645,
+  "recall_at_k": 0.9326989822616645,
+  "mrr_at_k": 0.6349099873933276,
+  "mean_rank": 3.6661327011181237,
+  "run_id": "R06_ltr_f1",
+  "model": "lightgbm_lambdarank_f1",
+  "seed": 20260907,
+  "throughput_rps": 117563.22157124606,
+  "latency_ms": 0.8591122176657232,
+  "val_ndcg_at_k": 0.7356919705290509,
+  "n_features": 10,
+  "best_iteration": 296,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": null,
+  "stream": null,
+  "significance": {
+    "mean_diff": 0.09180860097161939,
+    "se": 0.0005974363681595553,
+    "ci_low": 0.09070036258464065,
+    "ci_high": 0.0930029266998008,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.6154446674843735,
+    "model_ndcg": 0.7072532684559931,
+    "lift": 1.1491744194435654
+  }
+}

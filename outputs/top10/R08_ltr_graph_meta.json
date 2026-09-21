@@ -1,0 +1,8 @@
+{
+  "run_id": "R08_ltr_graph",
+  "model": "lightgbm_lambdarank_graph",
+  "seed": 20260907,
+  "ndcg_at10": 0.7085469017660666,
+  "generated_at": "2026-09-18T13:05:01.208699+00:00",
+  "n_rows": 1872780
+}

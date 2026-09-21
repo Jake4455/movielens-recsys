@@ -1,0 +1,8 @@
+{
+  "run_id": "R06_ltr_f1",
+  "model": "lightgbm_lambdarank_f1",
+  "seed": 20260907,
+  "ndcg_at10": 0.7072532684559931,
+  "generated_at": "2026-09-18T13:41:50.957397+00:00",
+  "n_rows": 1872780
+}

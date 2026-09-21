@@ -1,0 +1,8 @@
+{
+  "run_id": "R09_hardneg",
+  "model": "lightgbm_lambdarank_hardneg",
+  "seed": 20260907,
+  "ndcg_at10": 0.7584630302108271,
+  "generated_at": "2026-09-18T13:20:20.595733+00:00",
+  "n_rows": 1872780
+}

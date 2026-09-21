@@ -1,0 +1,34 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.2949663237574987,
+  "hr_at_k": 0.5643268296329521,
+  "recall_at_k": 0.5643268296329521,
+  "mrr_at_k": 0.21250742466381783,
+  "mean_rank": 15.1396480099104,
+  "run_id": "R03_als",
+  "model": "spark_als",
+  "seed": 20260907,
+  "throughput_rps": 56876.10739620982,
+  "latency_ms": 1.7757895999530122,
+  "als": {
+    "rank": 64,
+    "max_iter": 10,
+    "reg_param": 0.1,
+    "implicit_prefs": false,
+    "nonnegative": true
+  },
+  "significance": {
+    "mean_diff": -0.32047834372687484,
+    "se": 0.0008985395371642921,
+    "ci_low": -0.3221750605717208,
+    "ci_high": -0.31876210567012886,
+    "p_one_sided": 1.0,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.6154446674843735,
+    "model_ndcg": 0.2949663237574987,
+    "lift": 0.47927350636276017
+  }
+}

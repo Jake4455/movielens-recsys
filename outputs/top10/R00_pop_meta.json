@@ -1,0 +1,8 @@
+{
+  "run_id": "R00_pop",
+  "model": "most_popular_train",
+  "seed": 20260907,
+  "ndcg_at10": 0.6154446674843735,
+  "generated_at": "2026-09-16T07:50:13.416665+00:00",
+  "n_rows": 1872780
+}

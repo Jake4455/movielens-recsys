@@ -1,0 +1,125 @@
+# MovieLens 32M 分布式增量电影推荐系统
+
+课程项目：基于 MovieLens 32M，在教师协议（每位测试用户 1 个正样本 + 100 个固定负样本，种子 `20260907`）下优化 **NDCG@10**。
+
+**最终结果**：R10 模型 test NDCG@10 = **0.7604**，相对热门基线（0.6154）**+23.56%**；用户配对 95% CI 下界 **+0.1438**（p<0.001）；候选集多种子 σ_seed = 0.00077，5/5 套 lift ≥ 1.1。
+
+---
+
+## 1. 环境准备
+
+| 项 | 值 |
+|---|---|
+| OS | Windows 10/11 |
+| Python | 3.11（conda env `mlrecsys`） |
+| 依赖 | PySpark 4.0.0、LightGBM 4.7.0、pandas 2.2.3、numpy 1.26.4、scipy、python-igraph、matplotlib、pyarrow、PyYAML、pytest |
+| JDK | 21 LTS |
+
+```bash
+conda create -n mlrecsys python=3.11 -y
+conda activate mlrecsys
+pip install -r requirements.txt
+```
+
+**Windows Spark 依赖**：`tools/hadoop/bin/winutils.exe` 与 `hadoop.dll` 已随仓库提供（来源见 §7 合规声明）。`src/utils/spark.py` 会自动设置 `HADOOP_HOME`、`hadoop.home.dir`、`PATH` 与 `SPARK_LOCAL_IP=127.0.0.1`。
+
+## 2. 数据准备
+
+从 GroupLens 下载 `ml-32m.zip` 并解压到 `data/ml-32m/`，目录应包含：
+
+```
+data/ml-32m/{ratings.csv, movies.csv, tags.csv, links.csv, README.txt, checksums.txt}
+```
+
+用 `checksums.txt` 校验 MD5（ratings.csv = `cf12b74f9ad4b94a011f079e26d4270a` 等）。**原始数据不提交**，只提交脚本。
+
+## 3. 一键复现
+
+```bash
+conda activate mlrecsys
+python run_all.py --config conf/final.yaml
+```
+
+默认依次执行：`validate → split → stats → candidates → baseline → als → graph → stream → lsh → ltr`（每步产物落盘，重复运行自动跳过；`--force` 强制重算；`--stages` 指定子集）。
+
+各实验臂复现命令：
+
+| 目标 | 命令 |
+|---|---|
+| 协议层 + 热门基线（R00） | `python run_all.py --config conf/final.yaml --stages validate,split,stats,candidates,baseline` |
+| Spark ALS（R03） | `python run_all.py --config conf/final.yaml --stages als` |
+| 图特征（R08） | `python run_all.py --config conf/graph.yaml --stages graph,ltr --force` |
+| 流式 F3（R10，最优） | `python run_all.py --config conf/stream.yaml --stages stream,ltr --force` |
+| 任务二 精确 vs LSH | `python run_all.py --config conf/final.yaml --stages lsh --force` |
+| 任务三 分布式统计 + 扩展性 | `python run_all.py --config conf/stream.yaml --stages spark_features,scalability --force` |
+| 难负样本消融（R09） | `python run_all.py --config conf/hardneg.yaml --stages ltr --force` |
+| σ_seed 稳健性 | `python run_all.py --config conf/stream.yaml --stages seed --force` |
+| 单元测试 | `python -m pytest tests -q` |
+
+## 4. 目录结构
+
+```
+conf/                配置：final（R07）/ f1（R06）/ graph（R08）/ stream（R10）/ hardneg（R09）/ dev（冒烟）
+src/
+  data/              校验、80/10/10 时间划分、1+100 候选集、描述统计
+  recall/            ItemCF 精确余弦、SimHash LSH 索引
+  features/          basic（10+2 特征）、graph（PageRank/Louvain/随机游走）、distributed（Spark 统计）
+  stream/            时间戳回放、Structured Streaming 窗口聚合、时序安全特征
+  rank/              ALS 训练与打分、训练组构造、LightGBM LambdaRank
+  eval/              NDCG@10、配对 bootstrap、leaderboard、种子稳健性
+  serving/           Top-10 输出与元数据
+  stages.py          13 个流水线阶段
+run_all.py            一键入口
+requirements.txt      Python 依赖（pip install -r requirements.txt）
+tests/                协议层单元测试
+outputs/
+  leaderboard.csv     指标总表
+  metrics/            各 run 指标 JSON + 逐用户 NDCG + 特征重要性
+  top10/              各 run 的 Top-10 提交文件
+  reports/            数据质量/统计/LSH/σ_seed/Spark 扩展性报告
+data/processed/       train/val/test、candidates、图工件、流式聚合（均由脚本生成）
+tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
+```
+
+## 5. 关键配置
+
+| 项 | 默认 | 说明 |
+|---|---|---|
+| `seed` | 20260907 | 全局种子，影响候选、ALS、LightGBM |
+| `data.positive_threshold` | 4.0 | 正反馈定义 |
+| `data.candidates.num_negatives` | 100 | 每用户固定负样本数 |
+| `als.rank / max_iter` | 64 / 10 | Spark MLlib ALS |
+| `features.*` | bayes_rating / weighted_genre / graph / stream | 特征开关（用于消融） |
+| `ltr.run_id / params` | R07_ltr_content / 300 轮 | LightGBM LambdaRank |
+| `eval.bootstrap` | B=1000 | 配对检验 |
+| `scalability.parallelism` | [2,4,6,8] | 扩展性实验并行度 |
+
+## 6. 结果速查
+
+| run | 模型 | test NDCG@10 | lift |
+|---|---|---|---|
+| R00_pop | 热门基线 | 0.6154 | 1.000 |
+| R03_als | Spark ALS 直接排序 | 0.2950 | 0.479 |
+| R06_ltr_f1 | LightGBM（10 特征） | 0.7073 | +14.92% |
+| R07_ltr_content | +贝叶斯/加权画像（12） | 0.7069 | +14.86% |
+| R08_ltr_graph | +PageRank（13） | 0.7085 | +15.13% |
+| **R10_ltr_stream** | **+F3 比值（16，最优）** | **0.7604** | **+23.56%** |
+| R09_hardneg | 流行难负（16 特征，负结果） | 0.7585 | +23.24% |
+| R11_ltr_realneg | 真实负反馈难负（16 特征，负结果） | 0.7362 | +19.62% |
+
+详见 `docs/消融总表.md`、`docs/项目报告.md`。
+
+## 7. 合规声明
+
+- **不提交原始数据**，仅提交下载/校验/处理脚本；数据使用遵循 GroupLens 条款。
+- `tools/hadoop/bin/winutils.exe` 来源 `github.com/cdarlint/winutils`（hadoop-3.3.6），SHA256 = `496A591EB1E67DF2A620F710D529BA6DDFE1C19149E6647CC4E320BB0EFD8553`。
+- 引用：PySpark / LightGBM / SciPy / python-igraph / pandas / numpy / matplotlib；移植特征来源 Kaggle `hybrid-movie-recommendation-with-movielens-32m`（已在报告标注）。
+
+## 8. 常见问题
+
+| 现象 | 处理 |
+|---|---|
+| Spark 报 `HADOOP_HOME unset` | 确认 `tools/hadoop/bin/winutils.exe` 存在；`get_spark` 会自动配置 |
+| Python worker 连接超时 | 已固定 `SPARK_LOCAL_IP=127.0.0.1`、`spark.driver.host`；勿改本机名 |
+| 内存不足 | 用 `data.dev.max_users` 降采样冒烟；最终指标需全量 |
+| 想跳过已完成阶段 | 默认命中缓存；需要重算加 `--force` |

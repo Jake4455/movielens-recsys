@@ -1,0 +1,14 @@
+# MovieLens 32M 分布式增量推荐系统依赖（Python 3.11，conda env mlrecsys）
+# 安装：pip install -r requirements.txt
+# 另需：JDK 21（PySpark 运行环境）；Windows 需 tools/hadoop/bin/winutils.exe（见 README §1）
+
+pyspark==4.0.0
+lightgbm==4.7.0
+pandas==2.2.3
+numpy==1.26.4
+scipy==1.17.1
+pyarrow==25.0.1
+PyYAML==6.0.3
+pytest==9.1.1
+python-igraph==1.0.0
+matplotlib==3.11.2

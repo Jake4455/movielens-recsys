@@ -1,0 +1,8 @@
+{
+  "run_id": "R10_ltr_stream",
+  "model": "lightgbm_lambdarank_stream",
+  "seed": 20260907,
+  "ndcg_at10": 0.760422681951312,
+  "generated_at": "2026-09-18T13:12:55.435635+00:00",
+  "n_rows": 1872780
+}

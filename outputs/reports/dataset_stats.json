@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-09-16T07:31:20.254578+00:00",
+  "positive_threshold": 4.0,
+  "n_ratings_total": 32000204,
+  "n_users": 200948,
+  "n_movies": 71411,
+  "splits": {
+    "train": {
+      "n_ratings": 25771222,
+      "ratio": 0.8053455534220969,
+      "n_users": 200948,
+      "n_movies": 71411,
+      "n_positives": 13048993,
+      "positive_ratio": 0.5063397071353466,
+      "mean_rating": 3.557767152786255
+    },
+    "val": {
+      "n_ratings": 3114491,
+      "ratio": 0.09732722328895153,
+      "n_users": 200948,
+      "n_movies": 52139,
+      "n_positives": 1430609,
+      "positive_ratio": 0.4593395838999053,
+      "mean_rating": 3.45926833152771
+    },
+    "test": {
+      "n_ratings": 3114491,
+      "ratio": 0.09732722328895153,
+      "n_users": 200948,
+      "n_movies": 55558,
+      "n_positives": 1458629,
+      "positive_ratio": 0.46833623856996215,
+      "mean_rating": 3.4777791500091553
+    }
+  },
+  "n_movies_catalog": 87585,
+  "sparsity": 0.0018181902499853498,
+  "per_user_ratings": {
+    "p0": 16.0,
+    "p25": 30.0,
+    "p50": 59.0,
+    "p75": 135.0,
+    "p90": 292.0,
+    "p99": 1032.5299999999988,
+    "p100": 26666.0
+  },
+  "per_movie_ratings": {
+    "p0": 1.0,
+    "p25": 2.0,
+    "p50": 5.0,
+    "p75": 25.0,
+    "p90": 262.0,
+    "p99": 8701.899999999994,
+    "p100": 95832.0
+  },
+  "long_tail": {
+    "n_movies_lt_5_ratings": 35418,
+    "n_movies_lt_20_ratings": 51806,
+    "share_movies_lt_5_ratings": 0.4959740096063632
+  }
+}

@@ -1,0 +1,50 @@
+# Data Quality Report
+
+- generated_at: 2026-09-16T07:30:12.020053+00:00
+- all_passed: True
+
+## Checks
+
+| check | passed | detail |
+|---|---|---|
+| duplicates | True | 0 |
+| rating_range | True | [0.5, 5.0] |
+| timestamp_range | True | 0 |
+| no_missing_ratings | True | {'userId': 0, 'movieId': 0, 'rating': 0, 'timestamp': 0} |
+| movie_coverage | True | 0 |
+
+## Ratings
+
+| key | value |
+|---|---|
+| n_rows | 32000204 |
+| n_users | 200948 |
+| n_movies | 84432 |
+| n_duplicate_user_movie | 0 |
+| n_missing | {'userId': 0, 'movieId': 0, 'rating': 0, 'timestamp': 0} |
+| rating_min | 0.5 |
+| rating_max | 5.0 |
+| rating_values | [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0] |
+| rating_distribution | {'0.5': 525132, '1.0': 946675, '1.5': 531063, '2.0': 2028622, '2.5': 1685386, '3.0': 6054990, '3.5': 4290105, '4.0': 8367654, '4.5': 2974000, '5.0': 4596577} |
+| timestamp_min | 789652004 |
+| timestamp_max | 1697164147 |
+| timestamp_min_utc | 1995-01-09T11:46:44+00:00 |
+| timestamp_max_utc | 2023-10-13T02:29:07+00:00 |
+| n_timestamp_out_of_range | 0 |
+
+## Movies
+
+| key | value |
+|---|---|
+| n_rows | 87585 |
+| n_missing_title | 0 |
+| n_missing_genres | 0 |
+
+## Tags
+
+| key | value |
+|---|---|
+| n_rows | 2000072 |
+| n_users | 15848 |
+| n_movies | 51323 |
+| n_missing_tag | 17 |

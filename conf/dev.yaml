@@ -1,0 +1,89 @@
+seed: 20260907
+
+project:
+  name: movielens-recsys-dev
+
+paths:
+  raw_dir: data/ml-32m
+  processed_dir: data/processed_dev
+  outputs_dir: outputs_dev
+  logs_dir: outputs_dev/logs
+  reports_dir: outputs_dev/reports
+
+data:
+  files:
+    ratings: ratings.csv
+    movies: movies.csv
+    tags: tags.csv
+    links: links.csv
+  positive_threshold: 4.0
+  split:
+    train_ratio: 0.8
+    val_ratio: 0.1
+    test_ratio: 0.1
+  candidates:
+    num_negatives: 100
+    positive_pick: random
+    negative_scope: per_user
+    exclude:
+      positive: true
+      user_train_val: true
+      user_test: true
+    source: local
+    teacher_file: null
+  dev:
+    max_users: 2000
+
+baseline:
+  popularity:
+    positive_only: false
+
+spark:
+  master: local[4]
+  driver_memory: 4g
+  shuffle_partitions: 8
+  local_dir: spark-tmp
+  hadoop_home: tools/hadoop
+  log_level: WARN
+
+als:
+  rank: 32
+  max_iter: 5
+  reg_param: 0.1
+  implicit_prefs: false
+  nonnegative: true
+
+ltr:
+  max_train_users: 600
+  valid_users: 200
+  num_negatives: 100
+  hard_ratio: 0.0
+  hard_pool_size: 2000
+  num_boost_round: 60
+  early_stopping: 20
+  log_every: 20
+  params:
+    objective: lambdarank
+    metric: ndcg
+    ndcg_eval_at: [10]
+    lambdarank_truncation_level: 10
+    learning_rate: 0.1
+    num_leaves: 31
+    min_data_in_leaf: 50
+    feature_fraction: 0.9
+    bagging_fraction: 0.9
+    bagging_freq: 1
+    num_threads: 4
+    deterministic: true
+    force_row_wise: true
+
+eval:
+  k: 10
+  bootstrap:
+    n_boot: 1000
+    seed: 20260907
+    chunk: 25
+
+serving:
+  top_k: 10
+  columns: [userId, rank, movieId, score]

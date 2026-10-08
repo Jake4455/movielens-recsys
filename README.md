@@ -2,9 +2,11 @@
 
 课程项目：基于 MovieLens 32M，在教师协议（每位测试用户 1 个正样本 + 100 个固定负样本，种子 `20260907`）下优化 **NDCG@10**。
 
-**最终结果**（2026-10-08 候选集口径修复后重跑）：R10 模型 test NDCG@10 = **0.8587**，相对热门基线（0.7540）**+13.88%**；用户配对 95% CI 下界 **+0.1036**（p<0.001）；候选集多种子 σ_seed = 0.00061，5/5 套 lift ≥ 1.1。
+**最终结果**（2026-10-08）：**R13_ltr_itemcf_noes**（17 特征 = F1 协同 + F2 内容 + F3 流式 + F4 图 + **ItemCF 召回相似度**；固定 300 轮）test NDCG@10 = **0.8728**，相对热门基线（0.7540）**+15.75%**；用户配对 95% CI 下界 **+0.1177**（p<0.001）；σ_seed = **0.000363**（5 套候选 lift 1.1561–1.1575，**5/5 ≥ 1.1**）。
 
-> **口径修复说明**：`src/data/candidates.py` 的负采样此前在 `np.unique` 升序结果上直接截断，实际保留的是每次抽样中**最小**的 100 个 code（约 51% 的电影目录不可达，负样本平均热度是均匀抽样的 2.2 倍），导致热门基线被低估为 0.6154、lift 被夸大为 +23.56%。已改为均匀抽样并重跑全部实验；修复前的对照数据留在 `outputs_dev/pre_fix_evidence/`。
+> **两项关键发现（2026-10-08）**
+> 1. **候选集负采样口径缺陷（已修）**：`src/data/candidates.py` 的负采样此前在 `np.unique` 升序结果上直接截断，实际保留每次抽样中**最小**的 100 个 code（约 51% 目录不可达、负样本平均热度为均匀抽样的 2.2 倍），导致基线被低估为 0.6154、lift 被夸大为 +23.56%。修复后基线 0.7540、lift +13.88%（当时口径）。修复前证据留在 `outputs_dev/pre_fix_evidence/`。
+> 2. **早停缺陷（已定位）**：LightGBM 内部验证指标按行序打破并列，而训练组把正样本放在每组首行；当新特征在前几轮产生大量并列分数时，内部 NDCG 被系统性抬高，早停会锁死在第 1 轮。同一组特征开早停得 0.8296、关早停得 0.8728（差 0.043）。详见 `docs/消融总表.md` §3 表注 9。
 
 ---
 
@@ -51,7 +53,8 @@ python run_all.py --config conf/final.yaml
 | 协议层 + 热门基线（R00） | `python run_all.py --config conf/final.yaml --stages validate,split,stats,candidates,baseline` |
 | Spark ALS（R03） | `python run_all.py --config conf/final.yaml --stages als` |
 | 图特征（R08） | `python run_all.py --config conf/graph.yaml --stages graph,ltr --force` |
-| 流式 F3（R10，最优） | `python run_all.py --config conf/stream.yaml --stages stream,ltr --force` |
+| 流式 F3（R10） | `python run_all.py --config conf/stream.yaml --stages stream,ltr --force` |
+| **召回特征 + 固定轮数（R13，提交臂）** | `python run_all.py --config conf/itemcf_noes.yaml --stages stream,ltr --force` |
 | 任务二 精确 vs LSH | `python run_all.py --config conf/final.yaml --stages lsh --force` |
 | 任务三 分布式统计 + 扩展性 | `python run_all.py --config conf/stream.yaml --stages spark_features,scalability --force` |
 | 难负样本消融（R09） | `python run_all.py --config conf/hardneg.yaml --stages ltr --force` |
@@ -105,11 +108,13 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 | R06_ltr_f1 | LightGBM（10 特征） | 0.8205 | +8.82% |
 | R07_ltr_content | +贝叶斯/加权画像（12） | 0.8202 | +8.78% |
 | R08_ltr_graph | +PageRank（13） | 0.8213 | +8.93% |
-| **R10_ltr_stream** | **+F3 比值（16，最优）** | **0.8587** | **+13.88%** |
+| R10_ltr_stream | +F3 比值（16 特征） | 0.8587 | +13.88% |
 | R09_hardneg | 流行难负（16 特征，负结果） | 0.8518 | +12.97% |
 | R11_ltr_realneg | 真实负反馈难负（16 特征，负结果） | 0.8224 | +9.06% |
+| R12_ltr_itemcf | +ItemCF 召回相似度（17 特征，**早停失效**） | 0.8296 | +10.02% |
+| **R13_ltr_itemcf_noes** | **同上特征 + 固定 300 轮（当前最优、提交臂）** | **0.8728** | **+15.75%** |
 
-> `latency_ms` / `throughput_rps` 在 `outputs/leaderboard.csv` 中为**管线代理值**（该 run 阶段总耗时 / 测试用户数）；服务层**推理延迟**与吞吐写在 `outputs/top10/<run>_meta.json`（`latency_scope: inference_only`），R10 为 0.12 ms/用户、83.7 万行/秒。
+> `latency_ms` / `throughput_rps` 在 `outputs/leaderboard.csv` 中为**管线代理值**（该 run 阶段总耗时 / 测试用户数）；服务层**推理延迟**与吞吐写在 `outputs/top10/<run>_meta.json`（`latency_scope: inference_only`），R13 为 0.2504 ms/用户、40.3 万行/秒。
 
 详见 `docs/消融总表.md`、`docs/项目报告.md`。
 

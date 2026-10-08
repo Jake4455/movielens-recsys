@@ -1,0 +1,11 @@
+{
+  "run_id": "R13_ltr_itemcf_noes",
+  "model": "lightgbm_lambdarank_itemcf_noes",
+  "seed": 20260907,
+  "ndcg_at10": 0.8727866454249079,
+  "latency_ms": 0.25036978288960066,
+  "throughput_rps": 403403.3134283439,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T13:05:38.610626+00:00",
+  "n_rows": 1872780
+}

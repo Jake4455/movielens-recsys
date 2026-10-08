@@ -418,12 +418,15 @@ d_u = NDCG_model(u) - NDCG_pop(u)
 | `R05_graph` | 已完成（并入 R08） | 实际 **`R08_ltr_graph`** | 仅保留 PageRank；walk/community 为负结果 |
 | `R06_ltr_f1` | 已完成 | `R06_ltr_f1`（`conf/f1.yaml`） | 10 特征 0.8205，已复验逐位一致 |
 | `R07_ltr_f1f2` | 已完成（更名） | **`R07_ltr_content`**（`conf/final.yaml`） | +贝叶斯热度/加权画像（12 特征）0.8202 |
-| `R08_ltr_all` | 已完成（后移） | 实际 **`R10_ltr_stream`**（`conf/stream.yaml`） | 全 16 特征，当前最优 **0.8587** |
+| `R08_ltr_all` | 已完成（后移） | 实际 **`R10_ltr_stream`**（`conf/stream.yaml`） | 全 16 特征 0.8587；后续由 R13（17 特征 + 固定轮数）刷新为 **0.8728** |
 | `R09_hardneg` | 已完成（负结果，已重跑） | `R09_hardneg`（`conf/hardneg.yaml`）、`R11_ltr_realneg`（`conf/realneg.yaml`） | 两种难负源均无效：0.8518（流行）/0.8224（真实负反馈，best_iter=4）< R10 的 0.8587 |
 | （新增） | 已完成 | `R10_ltr_stream` | 任务四 F3 带来的最大增益（+0.0373） |
 | （新增） | 已完成 | stage `seed` | σ_seed=0.00061，5/5 套 lift ≥ 1.1（最小 1.1371） |
 | （新增） | 已完成 | stage `spark_features` / `scalability` | 任务三：分布式统计 + 扩展性实验 |
-| （新增） | 已完成（2026-10-08） | `src/data/candidates.py` 负采样口径修复 + 全臂重跑 | 候选集分布恢复均匀；基线 0.6154→0.7540，lift 修正为 +13.88% |
+| （新增） | 已完成（2026-10-08） | `src/data/candidates.py` 负采样口径修复 + 全臂重跑 | 候选集分布恢复均匀；基线 0.6154→0.7540 |
+| （新增） | 已完成（2026-10-08） | `R12_ltr_itemcf`（`conf/itemcf.yaml`） | 任务六"组合召回"：ItemCF 精确余弦相似度接入排序（17 特征）；**开早停时 best_iter=1、0.8296（失效）** |
+| **（新增）** | **已完成（2026-10-08，当前最优）** | **`R13_ltr_itemcf_noes`（`conf/itemcf_noes.yaml`）** | **同特征 + 固定 300 轮：0.8728 / lift 1.1575；同时定位到早停因并列分数误判的缺陷** |
+| （新增） | 已完成（2026-10-08） | `src/features/itemcf_sim.py`、`src/rank/ltr.py`、stage `seed` 按 run 留档 | 召回特征模块、可关闭的早停、σ_seed 分臂归档 |
 
 > 汇总表见 `docs/消融总表.md`。
 

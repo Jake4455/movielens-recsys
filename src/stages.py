@@ -364,6 +364,25 @@ def stage_ltr(cfg, force=False):
 
         ActivityContext = ActivityContextClass
         stream_context = ActivityContext.load(processed / "stream")
+    itemcf_context = None
+    if bool(get(cfg, "features.itemcf_sim", False)):
+        from src.features.itemcf_sim import ItemCFContext
+
+        itemcf_context, _ = ItemCFContext.load_or_build(
+            splits,
+            processed / "recall",
+            threshold=threshold,
+            top_k=int(get(cfg, "itemcf_sim.top_k", 50)),
+            block_size=int(get(cfg, "itemcf_sim.block_size", 500)),
+            force=force,
+            verbose=False,
+        )
+        logger.info(
+            "itemcf similarity: items=%d nnz=%d top_k=%d",
+            itemcf_context.similarity.shape[0],
+            itemcf_context.similarity.nnz,
+            itemcf_context.top_k,
+        )
     features_train = context.compute(train_groups, adjust_train=True)
     features_val = context.compute(val_groups)
     if graph_context is not None:
@@ -374,6 +393,14 @@ def stage_ltr(cfg, force=False):
         graph_val = graph_context.compute(val_groups)[graph_columns]
         features_train = pd.concat([features_train, graph_train], axis=1)
         features_val = pd.concat([features_val, graph_val], axis=1)
+    if itemcf_context is not None:
+        features_train = pd.concat(
+            [features_train, itemcf_context.compute(train_groups, adjust_train=True)],
+            axis=1,
+        )
+        features_val = pd.concat(
+            [features_val, itemcf_context.compute(val_groups)], axis=1
+        )
     if stream_context is not None:
         features_train = pd.concat(
             [features_train, stream_context.compute(train_groups, mode=stream_mode)],
@@ -431,6 +458,10 @@ def stage_ltr(cfg, force=False):
     if graph_context is not None:
         graph_test = graph_context.compute(candidates)[_graph_columns(cfg)]
         features_test = pd.concat([features_test, graph_test], axis=1)
+    if itemcf_context is not None:
+        features_test = pd.concat(
+            [features_test, itemcf_context.compute(candidates)], axis=1
+        )
     if stream_context is not None:
         features_test = pd.concat(
             [features_test, stream_context.compute(candidates, mode=stream_mode)],
@@ -462,6 +493,17 @@ def stage_ltr(cfg, force=False):
                 "val_groups": int(val_groups[schema.USER].nunique()),
             },
             "graph": graph_context.meta if graph_context is not None else None,
+            "itemcf_sim": (
+                {
+                    "feature": "itemcf_max_sim",
+                    "top_k": int(itemcf_context.top_k),
+                    "n_items": int(itemcf_context.similarity.shape[0]),
+                    "similarity_nnz": int(itemcf_context.similarity.nnz),
+                    "source": "train positives, leave-one-out on training rows",
+                }
+                if itemcf_context is not None
+                else None
+            ),
             "stream": (
                 {"mode": stream_mode, "features": ActivityContext.feature_columns(stream_mode)}
                 if stream_context is not None
@@ -775,6 +817,7 @@ def stage_seed(cfg, force=False):
     from src.eval.ndcg import evaluate_candidates
     from src.features.basic import FeatureContext
     from src.features.graph import load_or_build as load_graph
+    from src.rank.ltr import predict_scores
     from src.stream.features import ActivityContext
 
     run_id = get(cfg, "ltr.run_id", "R10_ltr_stream")
@@ -825,6 +868,18 @@ def stage_seed(cfg, force=False):
         if bool(get(cfg, "features.stream", False))
         else None
     )
+    itemcf_context = None
+    if bool(get(cfg, "features.itemcf_sim", False)):
+        from src.features.itemcf_sim import ItemCFContext
+
+        itemcf_context, _ = ItemCFContext.load_or_build(
+            splits,
+            processed / "recall",
+            threshold=threshold,
+            top_k=int(get(cfg, "itemcf_sim.top_k", 50)),
+            block_size=int(get(cfg, "itemcf_sim.block_size", 500)),
+            verbose=False,
+        )
     model = lgb.Booster(model_file=str(model_path))
     train = splits[schema.TRAIN]
 
@@ -852,12 +907,18 @@ def stage_seed(cfg, force=False):
                 [features, graph_context.compute(candidates)[_graph_columns(cfg)]],
                 axis=1,
             )
+        if itemcf_context is not None:
+            features = pd.concat(
+                [features, itemcf_context.compute(candidates)], axis=1
+            )
         if stream_context is not None:
             features = pd.concat(
                 [features, stream_context.compute(candidates, mode=stream_mode)],
                 axis=1,
             )
-        scores = model.predict(features)
+        # 分块预测：整块 1890 万行 × N 特征会让 LightGBM 先分配一份 float64 稠密矩阵
+        # （约 2.6 GB），在 16 GB 机器上与已有特征矩阵叠加会造成换页甚至卡死。
+        scores = predict_scores(model, features)
         metrics, _ = evaluate_candidates(
             candidates,
             scores,
@@ -913,6 +974,11 @@ def stage_seed(cfg, force=False):
     }
     with open(json_path, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
+    # 按 run 额外留档，避免不同臂的 σ_seed 互相覆盖
+    with open(
+        json_path.with_name(f"seed_robustness_{run_id}.json"), "w", encoding="utf-8"
+    ) as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
 
     lines = ["# 候选集种子稳健性（σ_seed）", ""]
     lines.append(f"- 固定模型：`{run_id}`")
@@ -938,6 +1004,10 @@ def stage_seed(cfg, force=False):
     lines.append("")
     lines.append(f"**判定**：{verdict}（σ_seed={sigma_seed:.6f}，Δ={delta:.4f}）。")
     with open(md_path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+    with open(
+        md_path.with_name(f"seed_robustness_{run_id}.md"), "w", encoding="utf-8"
+    ) as handle:
         handle.write("\n".join(lines))
     logger.info(
         "sigma_seed=%.6f min_lift=%.4f share=%.2f -> %s",

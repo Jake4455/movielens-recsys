@@ -7,3 +7,5 @@ R08_ltr_graph,lightgbm_lambdarank_graph,0.980019,0.821330,1.0893,0.066450,105959
 R10_ltr_stream,lightgbm_lambdarank_stream,0.986053,0.858661,1.1388,0.103633,66388.56,1.5213,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\stream.yaml,2026-10-08T10:45:25.615404+00:00
 R09_hardneg,lightgbm_lambdarank_hardneg,0.984056,0.851787,1.1297,0.096684,69265.66,1.4582,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\hardneg.yaml,2026-10-08T10:50:41.945507+00:00
 R11_ltr_realneg,lightgbm_lambdarank_realneg,0.981813,0.822352,1.0906,0.067180,81544.45,1.2386,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\realneg.yaml,2026-10-08T10:55:06.675238+00:00
+R12_ltr_itemcf,lightgbm_lambdarank_itemcf,0.983677,0.829605,1.1002,0.074477,34552.05,2.9231,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\itemcf.yaml,2026-10-08T12:53:41.113801+00:00
+R13_ltr_itemcf_noes,lightgbm_lambdarank_itemcf_noes,0.987126,0.872787,1.1575,0.117653,30343.64,3.3285,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\itemcf_noes.yaml,2026-10-08T13:05:38.613327+00:00

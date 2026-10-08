@@ -1,0 +1,11 @@
+{
+  "run_id": "R12_ltr_itemcf",
+  "model": "lightgbm_lambdarank_itemcf",
+  "seed": 20260907,
+  "ndcg_at10": 0.8296048720423007,
+  "latency_ms": 0.0074456065314613094,
+  "throughput_rps": 13565046.658485895,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T12:53:41.112281+00:00",
+  "n_rows": 1872780
+}

@@ -33,10 +33,10 @@ def train_ranker(cfg, features_train, labels_train, groups_train, features_val, 
         reference=train_set,
         free_raw_data=True,
     )
-    callbacks = [
-        lgb.early_stopping(int(get(cfg, "ltr.early_stopping", 50)), verbose=False),
-        lgb.log_evaluation(int(get(cfg, "ltr.log_every", 50))),
-    ]
+    callbacks = [lgb.log_evaluation(int(get(cfg, "ltr.log_every", 50)))]
+    rounds = int(get(cfg, "ltr.early_stopping", 50))
+    if rounds > 0:
+        callbacks.insert(0, lgb.early_stopping(rounds, verbose=False))
     model = lgb.train(
         params,
         train_set,

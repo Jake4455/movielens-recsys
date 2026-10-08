@@ -205,3 +205,91 @@ def test_teacher_source_fails_loudly():
     cfg["data"]["candidates"]["teacher_file"] = "some/teacher.csv"
     with pytest.raises(NotImplementedError, match="teacher"):
         build_candidates(splits, movies, cfg, seed=20260907)
+
+
+def _itemcf_fixture():
+    """Small train split with known overlaps for the similarity feature."""
+    rows = []
+    # user 1 & 2 share movies 1,2,3 ; user 3 only has movie 3
+    positives = {1: [1, 2, 3, 4], 2: [1, 2, 3, 5], 3: [3]}
+    for user, movies_ in positives.items():
+        for index, movie in enumerate(movies_):
+            rows.append(
+                {
+                    schema.USER: user,
+                    schema.MOVIE: movie,
+                    schema.RATING: 5.0,
+                    schema.TIMESTAMP: 1_000_000 + index,
+                }
+            )
+    frame = split_per_user(pd.DataFrame(rows))
+    return frames_by_split(frame)
+
+
+def test_itemcf_similarity_matches_dense_leave_one_user_out():
+    """特征必须等于"扣除该用户自身共现贡献"后的稠密余弦最大值。"""
+    from src.features.itemcf_sim import ItemCFContext
+
+    splits = _itemcf_fixture()
+    context = ItemCFContext.build(splits, threshold=4.0, top_k=50, verbose=False)
+
+    train = splits[schema.TRAIN]
+    user_ids = np.sort(train[schema.USER].unique())
+    item_ids = np.sort(train[schema.MOVIE].unique())
+    incidence = pd.DataFrame(0.0, index=user_ids, columns=item_ids)
+    for row in train.itertuples(index=False):
+        incidence.loc[getattr(row, schema.USER), getattr(row, schema.MOVIE)] = 1.0
+    matrix = incidence.to_numpy()
+    cooc = matrix.T @ matrix
+    counts = matrix.sum(axis=0)
+    position = {int(m): i for i, m in enumerate(item_ids)}
+    user_position = {int(u): i for i, u in enumerate(user_ids)}
+
+    frame = train[[schema.USER, schema.MOVIE]].copy()
+    values = context.compute(frame)["itemcf_max_sim"].to_numpy()
+    assert values.max() <= 1.0 + 1e-5
+    for index, (user, movie) in enumerate(frame[[schema.USER, schema.MOVIE]].to_numpy()):
+        row = user_position[int(user)]
+        own = matrix[row]
+        loo_cooc = cooc - np.outer(own, own)   # 扣掉该用户自己的共现贡献
+        loo_counts = counts - own              # 扣掉该用户自己的评分次数
+        candidate = position[int(movie)]
+        expected = 0.0
+        for other_pos, other in enumerate(item_ids):
+            if int(other) == int(movie) or own[other_pos] == 0:
+                continue
+            denominator = np.sqrt(max(loo_counts[candidate], 1e-9)) * np.sqrt(
+                max(loo_counts[other_pos], 1e-9)
+            )
+            expected = max(expected, loo_cooc[candidate, other_pos] / denominator)
+        assert abs(values[index] - expected) < 1e-5, (user, movie, values[index], expected)
+
+
+def test_itemcf_similarity_without_loo_is_higher_on_training_rows():
+    """关闭 LOO 时训练正样本的相似度被自身共现抬高 —— 这正是负结果的机制。"""
+    from src.features.itemcf_sim import ItemCFContext
+
+    splits = _itemcf_fixture()
+    context = ItemCFContext.build(splits, threshold=4.0, top_k=50, verbose=False)
+    frame = splits[schema.TRAIN][[schema.USER, schema.MOVIE]].copy()
+    loo = context.compute(frame, leave_one_user_out=True)["itemcf_max_sim"].to_numpy()
+    raw = context.compute(frame, leave_one_user_out=False, adjust_train=True)["itemcf_max_sim"].to_numpy()
+    assert raw.mean() > loo.mean()
+
+
+def test_itemcf_similarity_handles_unknown_movies_and_empty_users():
+    from src.features.itemcf_sim import ItemCFContext
+
+    splits = _itemcf_fixture()
+    context = ItemCFContext.build(splits, threshold=4.0, top_k=50, verbose=False)
+    frame = pd.DataFrame(
+        {
+            schema.USER: [1, 2, 99, 3],
+            schema.MOVIE: [2, 1, 1, 999],
+        }
+    )
+    values = context.compute(frame)["itemcf_max_sim"].to_numpy()
+    assert (values >= 0).all()
+    assert values[2] == 0.0  # 未知用户
+    assert values[3] == 0.0  # 未知电影
+    assert abs(values[0] - values[1]) < 1e-5  # 对称位置应一致

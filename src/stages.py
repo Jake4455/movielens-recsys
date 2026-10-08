@@ -1026,15 +1026,25 @@ def stage_stream(cfg, force=False):
     if meta_path.exists() and not force:
         logger.info("skip stream (cached)")
         return
-    from src.stream.replay import build_meta, run_aggregates, write_events, write_meta
+    from src.stream.replay import (
+        build_meta,
+        run_aggregates,
+        top_active_users,
+        write_events,
+        write_meta,
+    )
     from src.utils.spark import get_spark
 
     splits = _load_splits(cfg)
+    movies = read_movies(_raw_path(cfg, "movies"))
     start = time.perf_counter()
     rows, files = write_events(
         splits, stream_dir / "events", n_files=int(get(cfg, "stream.files", 24))
     )
     logger.info("replay files written: %d events in %d files", rows, len(files))
+    demo_users = int(get(cfg, "stream.profile_demo_users", 200))
+    demo_ids = top_active_users(stream_dir / "events", n=demo_users)
+    logger.info("demo users for incremental profile: %d (top by activity)", len(demo_ids))
     spark = get_spark(cfg, "stream")
     try:
         run_aggregates(
@@ -1043,13 +1053,23 @@ def stage_stream(cfg, force=False):
             stream_dir,
             stream_dir / "checkpoint",
             files_per_trigger=int(get(cfg, "stream.files_per_trigger", 2)),
+            movies=movies,
+            positive_threshold=float(get(cfg, "data.positive_threshold", 4.0)),
+            sample_fraction=float(get(cfg, "stream.sample_fraction", 0.01)),
+            sample_seed=int(get(cfg, "seed", 20260907)),
+            profile_half_life_days=float(
+                get(cfg, "stream.profile_half_life_days", 365.0)
+            ),
+            demo_users=demo_users,
+            demo_user_ids=demo_ids,
         )
     finally:
         spark.stop()
     elapsed = time.perf_counter() - start
     write_meta(
         build_meta(
-            rows, len(files), int(get(cfg, "stream.files_per_trigger", 2)), elapsed
+            rows, len(files), int(get(cfg, "stream.files_per_trigger", 2)), elapsed,
+            extra={"positive_threshold": float(get(cfg, "data.positive_threshold", 4.0))},
         ),
         meta_path,
     )
@@ -1060,6 +1080,20 @@ def stage_stream(cfg, force=False):
         len(user_daily),
         len(movie_daily),
         elapsed,
+    )
+    sampled = pd.read_parquet(stream_dir / "sampled", columns=["batch_id"])
+    profile_meta_path = stream_dir / "user_profile" / "meta.json"
+    profile = (
+        json.loads(profile_meta_path.read_text(encoding="utf-8"))
+        if profile_meta_path.exists()
+        else {}
+    )
+    logger.info(
+        "sampled=%d rows (%d batches); profile pairs=%d, batches=%d",
+        len(sampled),
+        int(sampled["batch_id"].nunique()),
+        int(profile.get("final_pairs", 0)),
+        len(profile.get("batches", [])),
     )
 
 

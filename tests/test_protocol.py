@@ -293,3 +293,41 @@ def test_itemcf_similarity_handles_unknown_movies_and_empty_users():
     assert values[2] == 0.0  # 未知用户
     assert values[3] == 0.0  # 未知电影
     assert abs(values[0] - values[1]) < 1e-5  # 对称位置应一致
+
+
+def test_stream_profile_decay_and_incremental_update():
+    """任务四：增量用户画像的指数衰减 + 跨批累加 + 剪枝。"""
+    from src.stream.replay import PROFILE_PRUNE_THRESHOLD, ProfileState, decay_factor
+
+    assert abs(decay_factor(0, 365.0) - 1.0) < 1e-12
+    assert abs(decay_factor(365, 365.0) - 0.5) < 1e-12
+    assert abs(decay_factor(-10, 365.0) - 1.0) < 1e-12  # 负间隔按 0 处理
+
+    state = ProfileState(half_life_days=365.0)
+    first = pd.DataFrame(
+        {
+            schema.USER: [1, 1, 2],
+            "genre": ["Drama", "Comedy", "Drama"],
+            "weight": [1.0, 0.5, 2.0],
+        }
+    )
+    entry = state.update(first, "2000-01-01", 1)
+    assert entry["state_pairs"] == 3
+    assert abs(entry["state_weight"] - 3.5) < 1e-9
+    assert entry["gap_days"] == 0
+
+    second = pd.DataFrame({schema.USER: [1], "genre": ["Drama"], "weight": [1.0]})
+    entry = state.update(second, "2000-12-31", 2)  # 距上一批 365 天
+    assert abs(entry["decay_factor"] - 0.5) < 1e-6
+    assert abs(float(state.series.loc[(1, "Drama")]) - 1.5) < 1e-6   # 0.5*1 + 1
+    assert abs(float(state.series.loc[(1, "Comedy")]) - 0.25) < 1e-6  # 0.5*0.5
+    assert abs(float(state.series.loc[(2, "Drama")]) - 1.0) < 1e-6    # 0.5*2
+
+    top = state.top_for_users([1], top_k=1)
+    assert len(top) == 1 and top.iloc[0]["genre"] == "Drama"
+
+    # 低于阈值的权重被剪枝，状态规模有界
+    tiny = pd.DataFrame({schema.USER: [3], "genre": ["Horror"], "weight": [PROFILE_PRUNE_THRESHOLD / 10]})
+    state.update(tiny, "2001-01-01", 3)
+    assert not any(index[0] == 3 for index in state.series.index)
+    assert state.pruned_total >= 1

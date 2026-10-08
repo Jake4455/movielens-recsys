@@ -293,8 +293,8 @@ d_u = NDCG_model(u) - NDCG_pop(u)
 |---|---|---|
 | FR-4.1 | 按时间戳回放评分流：先将数据按 ts 预排序落盘，再用 file source + maxFilesPerTrigger 有序回放（file source 不保证行序） | 演示 + 日志 |
 | FR-4.2 | 滑动窗口统计：近期热门、用户近期活跃度 | 窗口输出日志 |
-| FR-4.3 | 增量用户画像更新（标签兴趣时间衰减） | 画像快照 |
-| FR-4.4 | 时序安全：时刻 t 的画像只使用 t 之前的数据 | 单元测试 |
+| FR-4.3 | 增量用户画像更新（题材兴趣时间衰减） | ✅ 已实现（2026-10-08）：`user_profile/final/` 2,173,471 个 (用户,题材) 对 + 逐批 `progress.jsonl` + 示例快照，见 `outputs/reports/stream_profile_demo.md` |
+| FR-4.4 | 时序安全：时刻 t 的画像只使用 t 之前的数据 | 状态按批累加且事件文件按时间戳排序（构造上保证）；EWMA 衰减数学有单测 `test_stream_profile_decay_and_incremental_update` |
 
 ### FR-5 图推荐（任务五）
 

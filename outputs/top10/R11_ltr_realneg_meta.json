@@ -2,7 +2,10 @@
   "run_id": "R11_ltr_realneg",
   "model": "lightgbm_lambdarank_realneg",
   "seed": 20260907,
-  "ndcg_at10": 0.7361819909922706,
-  "generated_at": "2026-09-18T13:26:27.668117+00:00",
+  "ndcg_at10": 0.8223518869135384,
+  "latency_ms": 0.010793529939449433,
+  "throughput_rps": 9357457.714630837,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:55:06.675238+00:00",
   "n_rows": 1872780
 }

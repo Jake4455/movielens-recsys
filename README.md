@@ -2,7 +2,9 @@
 
 课程项目：基于 MovieLens 32M，在教师协议（每位测试用户 1 个正样本 + 100 个固定负样本，种子 `20260907`）下优化 **NDCG@10**。
 
-**最终结果**：R10 模型 test NDCG@10 = **0.7604**，相对热门基线（0.6154）**+23.56%**；用户配对 95% CI 下界 **+0.1438**（p<0.001）；候选集多种子 σ_seed = 0.00077，5/5 套 lift ≥ 1.1。
+**最终结果**（2026-10-08 候选集口径修复后重跑）：R10 模型 test NDCG@10 = **0.8587**，相对热门基线（0.7540）**+13.88%**；用户配对 95% CI 下界 **+0.1036**（p<0.001）；候选集多种子 σ_seed = 0.00061，5/5 套 lift ≥ 1.1。
+
+> **口径修复说明**：`src/data/candidates.py` 的负采样此前在 `np.unique` 升序结果上直接截断，实际保留的是每次抽样中**最小**的 100 个 code（约 51% 的电影目录不可达，负样本平均热度是均匀抽样的 2.2 倍），导致热门基线被低估为 0.6154、lift 被夸大为 +23.56%。已改为均匀抽样并重跑全部实验；修复前的对照数据留在 `outputs_dev/pre_fix_evidence/`。
 
 ---
 
@@ -59,7 +61,7 @@ python run_all.py --config conf/final.yaml
 ## 4. 目录结构
 
 ```
-conf/                配置：final（R07）/ f1（R06）/ graph（R08）/ stream（R10）/ hardneg（R09）/ dev（冒烟）
+conf/                配置：final（R07）/ f1（R06）/ graph（R08）/ stream（R10）/ hardneg（R09）/ realneg（R11）/ dev（冒烟）
 src/
   data/              校验、80/10/10 时间划分、1+100 候选集、描述统计
   recall/            ItemCF 精确余弦、SimHash LSH 索引
@@ -98,14 +100,16 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 
 | run | 模型 | test NDCG@10 | lift |
 |---|---|---|---|
-| R00_pop | 热门基线 | 0.6154 | 1.000 |
-| R03_als | Spark ALS 直接排序 | 0.2950 | 0.479 |
-| R06_ltr_f1 | LightGBM（10 特征） | 0.7073 | +14.92% |
-| R07_ltr_content | +贝叶斯/加权画像（12） | 0.7069 | +14.86% |
-| R08_ltr_graph | +PageRank（13） | 0.7085 | +15.13% |
-| **R10_ltr_stream** | **+F3 比值（16，最优）** | **0.7604** | **+23.56%** |
-| R09_hardneg | 流行难负（16 特征，负结果） | 0.7585 | +23.24% |
-| R11_ltr_realneg | 真实负反馈难负（16 特征，负结果） | 0.7362 | +19.62% |
+| R00_pop | 热门基线 | 0.7540 | 1.000 |
+| R03_als | Spark ALS 直接排序 | 0.2794 | 0.371 |
+| R06_ltr_f1 | LightGBM（10 特征） | 0.8205 | +8.82% |
+| R07_ltr_content | +贝叶斯/加权画像（12） | 0.8202 | +8.78% |
+| R08_ltr_graph | +PageRank（13） | 0.8213 | +8.93% |
+| **R10_ltr_stream** | **+F3 比值（16，最优）** | **0.8587** | **+13.88%** |
+| R09_hardneg | 流行难负（16 特征，负结果） | 0.8518 | +12.97% |
+| R11_ltr_realneg | 真实负反馈难负（16 特征，负结果） | 0.8224 | +9.06% |
+
+> `latency_ms` / `throughput_rps` 在 `outputs/leaderboard.csv` 中为**管线代理值**（该 run 阶段总耗时 / 测试用户数）；服务层**推理延迟**与吞吐写在 `outputs/top10/<run>_meta.json`（`latency_scope: inference_only`），R10 为 0.12 ms/用户、83.7 万行/秒。
 
 详见 `docs/消融总表.md`、`docs/项目报告.md`。
 

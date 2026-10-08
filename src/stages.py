@@ -143,17 +143,29 @@ def stage_baseline(cfg, force=False):
     columns = get(cfg, "serving.columns")
     start = time.perf_counter()
     scores = popularity_scores(train, candidates, positive_only=positive_only, threshold=threshold)
-    metrics, per_user = evaluate_candidates(candidates, scores, k=k)
+    infer_s = time.perf_counter() - start
+    metrics, per_user = evaluate_candidates(
+        candidates,
+        scores,
+        k=k,
+        expected_group_size=int(get(cfg, "data.candidates.num_negatives", 100)) + 1,
+    )
     top10 = top_k_table(candidates, scores, k=int(get(cfg, "serving.top_k", 10)), columns=columns)
     elapsed = time.perf_counter() - start
     n_users = metrics["n_users"]
+    serving_latency = float(infer_s / n_users * 1000.0) if n_users else 0.0
+    serving_rps = float(len(candidates) / infer_s) if infer_s > 0 else 0.0
     metrics.update(
         {
             "run_id": run_id,
             "model": "most_popular_train",
             "positive_only": positive_only,
+            "pipeline_s": float(elapsed),
             "throughput_rps": float(len(candidates) / elapsed) if elapsed > 0 else 0.0,
             "latency_ms": float(elapsed / n_users * 1000.0) if n_users else 0.0,
+            "infer_s": float(infer_s),
+            "infer_latency_ms": serving_latency,
+            "infer_throughput_rps": serving_rps,
         }
     )
     per_user.to_parquet(metrics_dir / f"{run_id}_per_user.parquet", index=False)
@@ -168,6 +180,9 @@ def stage_baseline(cfg, force=False):
             "model": metrics["model"],
             "seed": int(get(cfg, "seed", 20260907)),
             "ndcg_at10": metrics["ndcg_at_k"],
+            "latency_ms": serving_latency,
+            "throughput_rps": serving_rps,
+            "latency_scope": "inference_only",
         },
     )
     append_run(
@@ -220,7 +235,9 @@ def stage_als(cfg, force=False):
         model_path = outputs / "models" / run_id
         ensure_dirs(model_path.parent)
         model.write().overwrite().save(str(model_path))
+        infer_start = time.perf_counter()
         scores_frame = score_pairs(spark, model, candidate_pairs).toPandas()
+        infer_s = time.perf_counter() - infer_start
         scores_path = outputs / "scores" / f"{run_id}.parquet"
         ensure_dirs(scores_path.parent)
         scores_frame.to_parquet(scores_path, index=False)
@@ -245,6 +262,7 @@ def stage_als(cfg, force=False):
                 "nonnegative": bool(get(cfg, "als.nonnegative", True)),
             }
         },
+        infer_s=infer_s,
     )
     logger.info(
         "ndcg@%d=%.6f lift=%s",
@@ -275,11 +293,16 @@ def stage_ltr(cfg, force=False):
     k = int(get(cfg, "eval.k", 10))
     n_negatives = int(get(cfg, "ltr.num_negatives", 100))
     als_model_dir = outputs / "models" / "R03_als"
+    if not als_model_dir.exists():
+        raise FileNotFoundError(
+            f"ALS factors not found at {als_model_dir}: run the 'als' stage first. "
+            "Falling back silently would make als_score constant 0 and change the model."
+        )
     start = time.perf_counter()
     context = FeatureContext(
         splits,
         movies,
-        als_model_dir=als_model_dir if als_model_dir.exists() else None,
+        als_model_dir=als_model_dir,
         threshold=threshold,
         use_bayes_rating=bool(get(cfg, "features.bayes_rating", True)),
         use_weighted_genre=bool(get(cfg, "features.weighted_genre", True)),
@@ -291,16 +314,19 @@ def stage_ltr(cfg, force=False):
         splits[schema.TRAIN][schema.RATING] >= threshold
     ]
     val_positives = splits[schema.VAL][splits[schema.VAL][schema.RATING] >= threshold]
+    # Mirror the test candidate rule (exclude every observed interaction of the user)
+    # so a training negative can never be a pair the model is later evaluated on.
+    train_exclude = pd.concat([splits[schema.TRAIN], splits[schema.VAL], splits[schema.TEST]])
     train_groups = build_groups(
         cfg,
         train_positives,
-        splits[schema.TRAIN],
+        train_exclude,
         context.movie_ids,
         popularity=context.movie_count,
         seed=seed,
         max_users=get(cfg, "ltr.max_train_users"),
     )
-    val_exclude = pd.concat([splits[schema.TRAIN], splits[schema.VAL]])
+    val_exclude = pd.concat([splits[schema.TRAIN], splits[schema.VAL], splits[schema.TEST]])
     val_groups = build_groups(
         cfg,
         val_positives,
@@ -386,7 +412,9 @@ def stage_ltr(cfg, force=False):
     ).sort_values("gain", ascending=False)
     importance.to_csv(outputs / "metrics" / f"{run_id}_importance.csv", index=False)
     val_scores = predict_scores(model, features_val)
-    val_metrics, _ = evaluate_candidates(val_groups, val_scores, k=k)
+    val_metrics, _ = evaluate_candidates(
+        val_groups, val_scores, k=k, expected_group_size=n_negatives + 1
+    )
     logger.info("val ndcg@%d=%.6f", k, val_metrics["ndcg_at_k"])
     candidates = pd.read_parquet(processed / "candidates.parquet")
     als_scores = None
@@ -408,7 +436,9 @@ def stage_ltr(cfg, force=False):
             [features_test, stream_context.compute(candidates, mode=stream_mode)],
             axis=1,
         )
+    infer_start = time.perf_counter()
     test_scores = predict_scores(model, features_test)
+    infer_s = time.perf_counter() - infer_start
     elapsed = time.perf_counter() - start
     metrics, _, significance = rank_and_report(
         cfg,
@@ -438,6 +468,7 @@ def stage_ltr(cfg, force=False):
                 else None
             ),
         },
+        infer_s=infer_s,
     )
     logger.info(
         "test ndcg@%d=%.6f lift=%s",
@@ -509,7 +540,7 @@ def stage_spark_features(cfg, force=False):
             movies[[schema.MOVIE, schema.GENRES]]
         )
         stats = compute_distributed_stats(
-            spark, train, movies_sdf, processed / "spark_features"
+            spark, train, movies_sdf, processed / "spark_features", threshold=threshold
         )
         movie_stats = spark.read.parquet(
             str(processed / "spark_features" / "movie_stats")
@@ -827,11 +858,21 @@ def stage_seed(cfg, force=False):
                 axis=1,
             )
         scores = model.predict(features)
-        metrics, _ = evaluate_candidates(candidates, scores, k=k)
+        metrics, _ = evaluate_candidates(
+            candidates,
+            scores,
+            k=k,
+            expected_group_size=int(get(cfg, "data.candidates.num_negatives", 100)) + 1,
+        )
         popularity = popularity_scores(
             train, candidates, positive_only=positive_only, threshold=threshold
         )
-        pop_metrics, _ = evaluate_candidates(candidates, popularity, k=k)
+        pop_metrics, _ = evaluate_candidates(
+            candidates,
+            popularity,
+            k=k,
+            expected_group_size=int(get(cfg, "data.candidates.num_negatives", 100)) + 1,
+        )
         entries.append(
             {
                 "seed": seed,

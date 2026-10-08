@@ -1,6 +1,6 @@
 # Spark 分布式特征生成
 
-- 耗时：34.7s（local[8]）
+- 耗时：32.7s（local[8]）
 - movie_stats 行数：71411
 - user_stats 行数：200948
 - user_genre_stats 行数：3213100

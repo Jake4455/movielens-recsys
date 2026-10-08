@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.data import schema
-from src.data.candidates import build_candidates
+from src.data.candidates import _sample_negatives, build_candidates
 from src.data.split import frames_by_split, split_per_user
 from src.eval.ndcg import evaluate_candidates
 from src.eval.significance import paired_bootstrap, seed_variance
@@ -149,3 +150,58 @@ def test_significance_ci_and_seed_variance():
     assert variance["n_seeds"] == 3
     assert variance["share_lift_ge_target"] == 1.0
     assert variance["sigma_seed"] > 0
+
+
+def test_negative_sampling_is_uniform_over_the_whole_catalog():
+    """Regression: truncating the sorted ``np.unique`` draw kept the smallest codes only.
+
+    With the old code the retained codes were the 100 smallest of ~250 draws, so the
+    pool never exceeded ~40% of the catalog and averaged ~20% of the id range.
+    """
+    n_movies, n_negatives = 1000, 100
+    blocked = np.zeros(n_movies, dtype=bool)
+    rng = np.random.default_rng(20260907)
+    picks = np.concatenate(
+        [_sample_negatives(rng, blocked, n_negatives, n_movies) for _ in range(50)]
+    )
+    assert picks.size == 5000
+    assert picks.max() > 0.9 * n_movies, "negatives never reach the top of the id range"
+    assert abs(picks.mean() - n_movies / 2) < 0.05 * n_movies, "negative codes are biased low"
+
+
+def test_negative_sampling_respects_blocked_items():
+    n_movies, n_negatives = 200, 50
+    blocked = np.zeros(n_movies, dtype=bool)
+    blocked[: n_movies - n_negatives] = True
+    picks = _sample_negatives(np.random.default_rng(1), blocked, n_negatives, n_movies)
+    assert sorted(picks.tolist()) == list(range(n_movies - n_negatives, n_movies))
+
+
+def test_ndcg_enforces_expected_group_size():
+    rows, scores = [], []
+    for user in range(1, 3):
+        for position in range(1, 52):
+            rows.append(
+                {
+                    schema.USER: user,
+                    schema.MOVIE: user * 1000 + position,
+                    schema.LABEL: 1 if position == 1 else 0,
+                }
+            )
+            scores.append(1.0 if position == 1 else 0.0)
+    frame = pd.DataFrame(rows)
+    scores = np.asarray(scores, dtype=np.float64)
+    evaluate_candidates(frame, scores, k=10, expected_group_size=51)
+    with pytest.raises(ValueError, match="candidates per user"):
+        evaluate_candidates(frame, scores, k=10, expected_group_size=101)
+
+
+def test_teacher_source_fails_loudly():
+    movies = make_movies(60)
+    frame = split_per_user(make_ratings(n_users=2, n_per_user=10))
+    splits = frames_by_split(frame)
+    cfg = make_cfg(50)
+    cfg["data"]["candidates"]["source"] = "teacher"
+    cfg["data"]["candidates"]["teacher_file"] = "some/teacher.csv"
+    with pytest.raises(NotImplementedError, match="teacher"):
+        build_candidates(splits, movies, cfg, seed=20260907)

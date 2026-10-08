@@ -6,10 +6,10 @@ from pyspark.sql import functions as F
 from src.data import schema
 
 
-def compute_distributed_stats(spark, train, movies, out_dir):
+def compute_distributed_stats(spark, train, movies, out_dir, threshold=4.0):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    threshold = 4.0
+    threshold = float(threshold)
 
     movie_stats = train.groupBy(schema.MOVIE).agg(
         F.count("*").alias("movie_count"),

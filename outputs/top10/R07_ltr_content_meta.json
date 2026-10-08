@@ -2,7 +2,10 @@
   "run_id": "R07_ltr_content",
   "model": "lightgbm_lambdarank_content",
   "seed": 20260907,
-  "ndcg_at10": 0.7068889591289388,
-  "generated_at": "2026-09-18T13:00:35.368781+00:00",
+  "ndcg_at10": 0.8202118288359438,
+  "latency_ms": 0.14577523147406543,
+  "throughput_rps": 692847.4678359107,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:36:08.135164+00:00",
   "n_rows": 1872780
 }

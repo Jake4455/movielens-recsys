@@ -222,9 +222,16 @@ class FeatureContext:
         liked = None
         own_rating = None
         if adjust_train:
-            own_rating = self._pair_rating(
-                user_codes.astype(np.int64) * n_movies + movie_codes.astype(np.int64)
+            # Only build a key where both sides are known: an unknown movie code (-1)
+            # would otherwise alias the pair (user_code - 1, last movie) and let a
+            # foreign rating be subtracted as if it were the pair's own.
+            pair_keys = np.full(len(frame), -1, dtype=np.int64)
+            known_pair = known_user & known_movie
+            pair_keys[known_pair] = (
+                user_codes[known_pair].astype(np.int64) * n_movies
+                + movie_codes[known_pair].astype(np.int64)
             )
+            own_rating = self._pair_rating(pair_keys)
             in_train = ~np.isnan(own_rating)
             own_rating = np.nan_to_num(own_rating, nan=0.0)
             positive = in_train & (own_rating >= self.threshold) & known_user & known_movie

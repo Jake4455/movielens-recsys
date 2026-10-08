@@ -1,14 +1,18 @@
 {
   "k": 10,
   "n_users": 187278,
-  "ndcg_at_k": 0.6154446674843735,
-  "hr_at_k": 0.8860036950415959,
-  "recall_at_k": 0.8860036950415959,
-  "mrr_at_k": 0.530065745991402,
-  "mean_rank": 4.930771366631425,
+  "ndcg_at_k": 0.7540265941160711,
+  "hr_at_k": 0.96900329990709,
+  "recall_at_k": 0.96900329990709,
+  "mrr_at_k": 0.6844062290386741,
+  "mean_rank": 2.7228985785837097,
   "run_id": "R00_pop",
   "model": "most_popular_train",
   "positive_only": false,
-  "throughput_rps": 1049165.9547778359,
-  "latency_ms": 0.09626694379478512
+  "pipeline_s": 22.228808500000014,
+  "throughput_rps": 850926.3103328273,
+  "latency_ms": 0.11869417924155541,
+  "infer_s": 0.8068569000000139,
+  "infer_latency_ms": 0.004308337872040571,
+  "infer_throughput_rps": 23442915.342236865
 }

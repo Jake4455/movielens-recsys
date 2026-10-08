@@ -2,7 +2,10 @@
   "run_id": "R09_hardneg",
   "model": "lightgbm_lambdarank_hardneg",
   "seed": 20260907,
-  "ndcg_at10": 0.7584630302108271,
-  "generated_at": "2026-09-18T13:20:20.595733+00:00",
+  "ndcg_at10": 0.8517872662637629,
+  "latency_ms": 0.06512857943805489,
+  "throughput_rps": 1550778.4888209198,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:50:41.945507+00:00",
   "n_rows": 1872780
 }

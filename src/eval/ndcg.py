@@ -4,7 +4,7 @@ import pandas as pd
 from src.data import schema
 
 
-def evaluate_candidates(candidates, scores, k=10):
+def evaluate_candidates(candidates, scores, k=10, expected_group_size=None):
     user = candidates[schema.USER].to_numpy()
     movie = candidates[schema.MOVIE].to_numpy()
     label = candidates[schema.LABEL].to_numpy()
@@ -18,6 +18,14 @@ def evaluate_candidates(candidates, scores, k=10):
     if not np.all(positives_per_user == 1):
         bad = int((positives_per_user != 1).sum())
         raise ValueError(f"protocol requires exactly 1 positive per user, violated for {bad} users")
+    if expected_group_size is not None:
+        group_sizes = np.bincount(codes, minlength=n_users)
+        if not np.all(group_sizes == int(expected_group_size)):
+            bad = int((group_sizes != int(expected_group_size)).sum())
+            raise ValueError(
+                f"protocol requires exactly {int(expected_group_size)} candidates per user "
+                f"(1 positive + K negatives), violated for {bad} users"
+            )
     positive_scores = np.zeros(n_users, dtype=np.float64)
     positive_scores[codes[positive_mask]] = scores[positive_mask]
     positive_movies = np.zeros(n_users, dtype=movie.dtype)

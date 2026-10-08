@@ -2,7 +2,10 @@
   "run_id": "R00_pop",
   "model": "most_popular_train",
   "seed": 20260907,
-  "ndcg_at10": 0.6154446674843735,
-  "generated_at": "2026-09-16T07:50:13.416665+00:00",
+  "ndcg_at10": 0.7540265941160711,
+  "latency_ms": 0.004308337872040571,
+  "throughput_rps": 23442915.342236865,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:23:48.090280+00:00",
   "n_rows": 1872780
 }

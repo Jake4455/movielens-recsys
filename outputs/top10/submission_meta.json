@@ -1,0 +1,16 @@
+{
+  "run_id": "R10_ltr_stream",
+  "source_file": "R10_ltr_stream.csv",
+  "columns": [
+    "userId",
+    "rank",
+    "movieId",
+    "score"
+  ],
+  "n_rows": 1872780,
+  "n_users": 187278,
+  "rows_per_user": 10,
+  "generated_at": "2026-10-08T11:11:32.478990+00:00",
+  "ndcg_at10": 0.8586608686866943,
+  "format_note": "列名/排序由 conf/*.yaml 的 serving.columns 控制；教师格式（Q6）确认后改配置重跑即可"
+}

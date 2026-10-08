@@ -22,6 +22,11 @@ def _significance_vs_baseline(cfg, per_user, run_id, metrics_dir):
         suffixes=("", "_base"),
         how="inner",
     )
+    if len(merged) != len(per_user) or len(merged) != len(baseline):
+        raise ValueError(
+            "paired significance requires identical user sets: "
+            f"model={len(per_user)} baseline={len(baseline)} merged={len(merged)}"
+        )
     diffs = merged["ndcg"].to_numpy() - merged["ndcg_base"].to_numpy()
     bootstrap_cfg = get(cfg, "eval.bootstrap", {}) or {}
     result = paired_bootstrap(
@@ -38,13 +43,26 @@ def _significance_vs_baseline(cfg, per_user, run_id, metrics_dir):
     return result, result["lift"]
 
 
-def rank_and_report(cfg, candidates, scores, run_id, model_name, elapsed_s, extra=None):
+def rank_and_report(
+    cfg, candidates, scores, run_id, model_name, elapsed_s, extra=None, infer_s=None
+):
+    """Persist metrics/artifacts for one ranking arm.
+
+    ``elapsed_s`` is the whole stage wall clock (pipeline proxy); ``infer_s`` is the
+    scoring-only time used for the serving latency/throughput reported in the
+    Top-10 metadata. Keeping both avoids labelling pipeline time as serving latency.
+    """
     outputs = path_of(cfg, "paths.outputs_dir")
     metrics_dir = outputs / "metrics"
     top10_dir = outputs / "top10"
     ensure_dirs(metrics_dir, top10_dir)
     k = int(get(cfg, "eval.k", 10))
-    metrics, per_user = evaluate_candidates(candidates, scores, k=k)
+    metrics, per_user = evaluate_candidates(
+        candidates,
+        scores,
+        k=k,
+        expected_group_size=int(get(cfg, "data.candidates.num_negatives", 100)) + 1,
+    )
     top10 = top_k_table(
         candidates,
         scores,
@@ -57,10 +75,25 @@ def rank_and_report(cfg, candidates, scores, run_id, model_name, elapsed_s, extr
             "run_id": run_id,
             "model": model_name,
             "seed": int(get(cfg, "seed", 20260907)),
+            "pipeline_s": float(elapsed_s),
             "throughput_rps": float(len(candidates) / elapsed_s) if elapsed_s > 0 else 0.0,
             "latency_ms": float(elapsed_s / n_users * 1000.0) if n_users else 0.0,
         }
     )
+    serving_latency = metrics["latency_ms"]
+    serving_rps = metrics["throughput_rps"]
+    serving_scope = "pipeline_proxy"
+    if infer_s is not None and infer_s > 0:
+        serving_latency = float(infer_s / n_users * 1000.0) if n_users else 0.0
+        serving_rps = float(len(candidates) / infer_s)
+        serving_scope = "inference_only"
+        metrics.update(
+            {
+                "infer_s": float(infer_s),
+                "infer_latency_ms": serving_latency,
+                "infer_throughput_rps": serving_rps,
+            }
+        )
     if extra:
         metrics.update(extra)
     significance, lift = _significance_vs_baseline(cfg, per_user, run_id, metrics_dir)
@@ -78,6 +111,9 @@ def rank_and_report(cfg, candidates, scores, run_id, model_name, elapsed_s, extr
             "model": model_name,
             "seed": int(get(cfg, "seed", 20260907)),
             "ndcg_at10": metrics["ndcg_at_k"],
+            "latency_ms": serving_latency,
+            "throughput_rps": serving_rps,
+            "latency_scope": serving_scope,
         },
     )
     append_run(

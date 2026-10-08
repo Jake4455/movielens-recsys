@@ -1,4 +1,6 @@
-data/
+# 只忽略仓库根目录的原始/派生数据；不要用 `data/`（无前导斜杠会匹配任意层级的 data/，
+# 曾把整个 src/data/ 源码包一并忽略，导致 clone 后无法运行）
+/data/
 outputs/*
 !outputs/leaderboard.csv
 !outputs/reports/

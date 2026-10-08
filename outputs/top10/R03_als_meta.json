@@ -2,7 +2,10 @@
   "run_id": "R03_als",
   "model": "spark_als",
   "seed": 20260907,
-  "ndcg_at10": 0.2949663237574987,
-  "generated_at": "2026-09-16T07:56:57.842881+00:00",
+  "ndcg_at10": 0.27939101124973925,
+  "latency_ms": 0.38886906150215195,
+  "throughput_rps": 259727.5278466479,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:29:40.296583+00:00",
   "n_rows": 1872780
 }

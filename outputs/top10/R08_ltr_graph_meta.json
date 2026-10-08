@@ -2,7 +2,10 @@
   "run_id": "R08_ltr_graph",
   "model": "lightgbm_lambdarank_graph",
   "seed": 20260907,
-  "ndcg_at10": 0.7085469017660666,
-  "generated_at": "2026-09-18T13:05:01.208699+00:00",
+  "ndcg_at10": 0.8213303614747278,
+  "latency_ms": 0.21957881331496454,
+  "throughput_rps": 459971.51763055247,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-08T10:39:55.111887+00:00",
   "n_rows": 1872780
 }

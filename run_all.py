@@ -1,7 +1,14 @@
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
+
+# Must precede any import that could spawn workers: PYTHONHASHSEED is honoured only
+# at interpreter start-up, so this affects the child processes (Spark Python workers)
+# rather than the current one.
+os.environ.setdefault("PYTHONHASHSEED", "20260907")
+os.environ.setdefault("SPARK_LOCAL_IP", "127.0.0.1")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -45,9 +52,12 @@ def main():
     seed = set_all_seeds(get(cfg, "seed", 20260907))
     logger.info("config=%s seed=%d", cfg["_config_path"], seed)
     requested = [name.strip() for name in args.stages.split(",") if name.strip()]
+    if not requested:
+        raise SystemExit("no stages requested (--stages was empty)")
     unknown = [name for name in requested if name not in STAGES]
     if unknown:
         raise SystemExit(f"unknown stages: {unknown}, available: {sorted(STAGES)}")
+    logger.info("stages=%s force=%s", ",".join(requested), args.force)
     for name in requested:
         start = time.perf_counter()
         logger.info("stage start: %s", name)

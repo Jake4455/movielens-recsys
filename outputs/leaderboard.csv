@@ -9,3 +9,4 @@ R09_hardneg,lightgbm_lambdarank_hardneg,0.984056,0.851787,1.1297,0.096684,69265.
 R11_ltr_realneg,lightgbm_lambdarank_realneg,0.981813,0.822352,1.0906,0.067180,81544.45,1.2386,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\realneg.yaml,2026-10-08T10:55:06.675238+00:00
 R12_ltr_itemcf,lightgbm_lambdarank_itemcf,0.983677,0.829605,1.1002,0.074477,34552.05,2.9231,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\itemcf.yaml,2026-10-08T12:53:41.113801+00:00
 R13_ltr_itemcf_noes,lightgbm_lambdarank_itemcf_noes,0.987126,0.872787,1.1575,0.117653,30343.64,3.3285,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\itemcf_noes.yaml,2026-10-08T13:05:38.613327+00:00
+R14_ltr_stream_noes,lightgbm_lambdarank_stream,0.985914,0.858790,1.1389,0.103715,38235.09,2.6416,20260907,D:\Projects\CourseAssignment\movielens-recsys\conf\stream_noes.yaml,2026-10-09T14:56:30.569661+00:00

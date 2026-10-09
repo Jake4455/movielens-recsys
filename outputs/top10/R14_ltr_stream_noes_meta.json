@@ -1,0 +1,11 @@
+{
+  "run_id": "R14_ltr_stream_noes",
+  "model": "lightgbm_lambdarank_stream",
+  "seed": 20260907,
+  "ndcg_at10": 0.8587903905885592,
+  "latency_ms": 0.31874209197023207,
+  "throughput_rps": 316870.60650098446,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-09T14:56:30.554038+00:00",
+  "n_rows": 1872780
+}

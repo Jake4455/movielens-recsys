@@ -1,0 +1,68 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.8587903905885592,
+  "hr_at_k": 0.9859139888294407,
+  "recall_at_k": 0.9859139888294407,
+  "mrr_at_k": 0.816503349489605,
+  "mean_rank": 1.9042439581798183,
+  "run_id": "R14_ltr_stream_noes",
+  "model": "lightgbm_lambdarank_stream",
+  "seed": 20260907,
+  "pipeline_s": 494.7046432999996,
+  "throughput_rps": 38235.09291084112,
+  "latency_ms": 2.641552362263585,
+  "infer_s": 59.693381500001124,
+  "infer_latency_ms": 0.31874209197023207,
+  "infer_throughput_rps": 316870.60650098446,
+  "val_ndcg_at_k": 0.8749306297491206,
+  "n_features": 16,
+  "best_iteration": 300,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": {
+    "seed": 20260907,
+    "positive_threshold": 4.0,
+    "n_users": 200948,
+    "n_items": 71411,
+    "max_items": 20000,
+    "n_graph_items": 20000,
+    "top_k": 50,
+    "pagerank_iters": 20,
+    "damping": 0.85,
+    "lpa_iters": 5,
+    "community_method": "louvain",
+    "community_resolution": 5.0,
+    "n_communities": 70,
+    "graph_item_positive_coverage": 0.9961018562316895,
+    "topk_nnz": 1000000
+  },
+  "itemcf_sim": null,
+  "stream": {
+    "mode": "ratio",
+    "features": [
+      "user_activity_ratio_7_30",
+      "user_activity_ratio_30_90",
+      "movie_recent_ratio_7_30"
+    ]
+  },
+  "significance": {
+    "mean_diff": 0.10476379647248803,
+    "se": 0.0005406108917970909,
+    "ci_low": 0.10371471041394749,
+    "ci_high": 0.10583491702026572,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.7540265941160711,
+    "model_ndcg": 0.8587903905885592,
+    "lift": 1.138939126670062
+  }
+}

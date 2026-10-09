@@ -38,6 +38,22 @@
 | best_iteration | 283 |
 | 特征矩阵原始大小（float32） | 616 MB |
 
+## 3b. 单臂全流程实测：R14（16 特征 + 固定 300 轮，2026-10-09）
+
+> 采样方式：PowerShell 每 5 秒记录最大 `python` 进程 WorkingSet 与 CPU 累计秒数、系统可用内存；脚本 `outputs_dev/fix_run/r14_sampler.ps1`，原始数据 `outputs_dev/fix_run/r14_resources.csv`（110 个采样点）。
+> **本阶段不使用 Spark**（仅 `--stages ltr`），因此只有 `python` 进程，无 JVM 竞争。
+
+| 指标 | 实测 |
+|---|---|
+| 墙钟总耗时 | **566 s**（≈9.4 分钟；`stage done: ltr in 564.35s`） |
+| python 进程 **峰值 WorkingSet** | **8.24 GB**（出现在训练中段） |
+| 平均 WorkingSet | 3.51 GB |
+| 系统可用内存最低值 | **0.02 GB**（内存压力极大，但未发生换盘卡死） |
+| 累计 CPU 时间 | **941 s**（8 线程，等效约 1.7 核满载 × 566 s） |
+| 新增磁盘产物 | 64.6 MB（模型 2.02 + Top-10 61.46 + per_user 1.14 + 其他） |
+
+> 说明：本表的 8.24 GB 是**单进程**峰值，高于 §4 中"java+python 之和峰值 9.27 GB"里 python 的份额 —— 说明 LightGBM 训练期的内存需求（特征矩阵 + binning 中间态）比早期估计更高，16 GB 机器上属于"可用但吃紧"，建议运行时先释放其他程序内存。
+
 ## 4. 进程内存与 CPU（采样峰值）
 
 | 指标 | 实测 |

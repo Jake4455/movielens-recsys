@@ -23,6 +23,10 @@ def build_groups(
     hard_ratio = float(hard_ratio)
     hard_source = str(get(cfg, "ltr.hard_negative_source", "popular"))
     hard_pool_size = int(get(cfg, "ltr.hard_pool_size", 5000))
+    # 正样本在组内的行序。默认 first = 历史行为，禁止改动默认值：
+    # LightGBM 内部排序指标按行序打破并列，正样本置首会在高并列场景虚高内部 NDCG
+    # （R12 早停锁死在第 1 轮的根因）。last 仅供 R20 根因反事实实验使用。
+    positive_first = str(get(cfg, "ltr.positive_row", "first")).lower() != "last"
     rng = np.random.default_rng(int(seed))
 
     ordered = positives.sort_values(
@@ -106,17 +110,24 @@ def build_groups(
         if block is not None and block.size:
             blocked[block] = False
         target_ts = int(positive_ts[user])
-        out_users[cursor] = user
-        out_movies[cursor] = positive_id
-        out_labels[cursor] = 1
-        out_target_ts[cursor] = target_ts
-        cursor += 1
+        if positive_first:
+            out_users[cursor] = user
+            out_movies[cursor] = positive_id
+            out_labels[cursor] = 1
+            out_target_ts[cursor] = target_ts
+            cursor += 1
         for source in (easy, hard):
             if source.size:
                 out_users[cursor : cursor + source.size] = user
                 out_movies[cursor : cursor + source.size] = movie_ids[source]
                 out_target_ts[cursor : cursor + source.size] = target_ts
                 cursor += source.size
+        if not positive_first:
+            out_users[cursor] = user
+            out_movies[cursor] = positive_id
+            out_labels[cursor] = 1
+            out_target_ts[cursor] = target_ts
+            cursor += 1
         if positive_code < 0 or positive_id not in positive_movie.values():
             raise RuntimeError("invalid positive mapping")
     return pd.DataFrame(

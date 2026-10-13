@@ -1,0 +1,11 @@
+{
+  "run_id": "R16_ltr_graph_noes",
+  "model": "lightgbm_lambdarank_graph_noes",
+  "seed": 20260907,
+  "ndcg_at10": 0.8213219014276534,
+  "latency_ms": 0.15973818897574613,
+  "throughput_rps": 632284.6192737,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-12T15:52:12.871577+00:00",
+  "n_rows": 1872780
+}

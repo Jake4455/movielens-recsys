@@ -27,6 +27,40 @@ pip install -r requirements.txt
 
 **Windows Spark 依赖**：`tools/hadoop/bin/winutils.exe` 与 `hadoop.dll` 已随仓库提供（来源见 §7 合规声明）。`src/utils/spark.py` 会自动设置 `HADOOP_HOME`、`hadoop.home.dir`、`PATH` 与 `SPARK_LOCAL_IP=127.0.0.1`。
 
+### 1.2 在 WSL(Ubuntu 26.04) 中运行（2026-10-12 验证）
+
+原则：**代码留 `/mnt/d`（git 工作区，Windows 可编辑），重数据与 Spark 落盘放 ext4**。本机实测 9p（`/mnt/d`）顺序读 286 MB/s vs ext4 2.6 GB/s；建 2000 个小文件慢约 **120×**——Spark 的 shuffle/spill 正是海量小文件，留在 9p 会被拖死。
+
+| 项 | 值 |
+|---|---|
+| JDK | OpenJDK **21.0.12.1**（经 `wsl.exe -u root` + apt 安装，无需交互密码） |
+| 环境 | conda env `mlrecsys` @ `/opt/work/envs/mlrecsys`（python 3.11.17，依赖与 Windows 版逐项同版本） |
+| 原始数据 | `/opt/work/data/movielens-recsys/ml-32m`（MD5 与 `checksums.txt` 全部一致） |
+| 派生数据 | `/opt/work/data/movielens-recsys/processed`（重新生成，不复用 Windows 产物） |
+| Spark 落盘 | `/opt/work/tmp/spark-mlrecsys`（ext4） |
+| 运行产物 | `/opt/work/data/movielens-recsys/outputs_wsl`（**不覆盖仓库 `outputs/`**） |
+| 配置 | `conf/wsl.yaml`（= `conf/final.yaml`，仅改 5 个 `paths.*` + `spark.local_dir` + `driver_memory 8g→6g`）、`conf/wsl_itemcf_noes.yaml`（R13 臂同口径） |
+
+```bash
+source /opt/work/miniforge3/etc/profile.d/conda.sh && conda activate mlrecsys
+bash /mnt/d/Ubuntu/tools/install-mlrecsys-wsl.sh    # 幂等：JDK + conda 环境 + 依赖 + 数据落位
+bash /mnt/d/Ubuntu/tools/run-mlrecsys-wsl.sh conf/wsl.yaml \
+     validate,split,stats,candidates,baseline,als,graph,stream,lsh,ltr wsl-full
+bash /mnt/d/Ubuntu/tools/verify-mlrecsys-wsl.sh     # 只读自检 + 与 Windows 基准逐 run 对账
+```
+
+**复算结果**：`R00_pop`、`R03_als`、`R07_ltr_content`、`R13_ltr_itemcf_noes` 四个 run 的 `ndcg_at_k / hr_at_k / recall_at_k / mrr_at_k / mean_rank / val_ndcg_at_k / best_iteration / n_features` **全部逐位相同**（27 项比对，delta = 0.00e+00）。R13 = **0.8727866454 / lift 1.1575**，与提交值一致。
+
+| 阶段 | Windows | WSL | 说明 |
+|---|---|---|---|
+| candidates / baseline | 21.2 s / 25.4 s | 20.3 s / 10.5 s | 数据在 ext4 |
+| als | 351.5 s | 420.1 s | driver 6g（WSL 内存所限）略慢 |
+| stream | 218.2 s | 110.4 s | 快 2× |
+| ltr（R07 12 特征 / R13 17 特征） | ~194 s / ~564 s | 200.6 s / 462.3 s | 早停轮数同为 225 |
+
+三条 WSL 特有约束：① `spark.local_dir` 必须在 ext4 上；② `driver_memory` 降到 6g，`ltr` 阶段峰值会顶到 ~11.9 GB（11.9 GiB 上限，靠 swap 兜底）；③ 后台长任务必须用 DSH 托管后台任务，`setsid nohup` 起的进程会在工具调用结束时被回收。
+
+
 ## 2. 数据准备
 
 从 GroupLens 下载 `ml-32m.zip` 并解压到 `data/ml-32m/`，目录应包含：
@@ -59,12 +93,13 @@ python run_all.py --config conf/final.yaml
 | 任务三 分布式统计 + 扩展性 | `python run_all.py --config conf/stream.yaml --stages spark_features,scalability --force` |
 | 难负样本消融（R09） | `python run_all.py --config conf/hardneg.yaml --stages ltr --force` |
 | σ_seed 稳健性 | `python run_all.py --config conf/stream.yaml --stages seed --force` |
+| **补强消融 9 臂（R15–R22/R26）** | `python -u /mnt/d/Ubuntu/tools/run-mlrecsys-wsl-batch.py`（WSL 批跑，读 `tools/wsl-arms.json`；配置由 `gen-wsl-confs.py` 生成，见 §1.2） |
 | 单元测试 | `python -m pytest tests -q` |
 
 ## 4. 目录结构
 
 ```
-conf/                配置：final（R07）/ f1（R06）/ graph（R08）/ stream（R10）/ hardneg（R09）/ realneg（R11）/ dev（冒烟）
+conf/                配置：final（R07）/ f1（R06）/ graph（R08）/ stream（R10）/ hardneg（R09）/ realneg（R11）/ itemcf_noes（R13）/ wsl*（WSL 运行版：仅换路径与落盘位置）/ dev（冒烟）
 src/
   data/              校验、80/10/10 时间划分、1+100 候选集、描述统计
   recall/            ItemCF 精确余弦、SimHash LSH 索引
@@ -96,6 +131,7 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 | `als.rank / max_iter` | 64 / 10 | Spark MLlib ALS |
 | `features.*` | bayes_rating / weighted_genre / graph / stream | 特征开关（用于消融） |
 | `ltr.run_id / params` | R07_ltr_content / 300 轮 | LightGBM LambdaRank |
+| `ltr.positive_row` | `first` | 正样本在训练组内的行序。**默认值禁止改动**；`last` 仅用于 R20 早停缺陷根因反事实实验（LightGBM 内部指标按行序打破并列，正样本置首会在高并列场景虚高内部 NDCG） |
 | `eval.bootstrap` | B=1000 | 配对检验 |
 | `scalability.parallelism` | [2,4,6,8] | 扩展性实验并行度 |
 
@@ -115,6 +151,16 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 | R12_ltr_itemcf | +ItemCF 召回相似度（17 特征，**早停失效**） | 0.8296 | +10.02% |
 | **R13_ltr_itemcf_noes** | **同上特征 + 固定 300 轮（当前最优、提交臂）** | **0.8728** | **+15.75%** |
 
+**2026-10-12 补强臂（9 个，完整分析见 `docs/消融总表.md` §6）**：
+
+| run | 内容 | test NDCG@10 | 关键结论 |
+|---|---|---|---|
+| R17_ltr_itemcf_nostream | R13 − F3 时序三件套（LOO） | 0.8497 | F3 真实边际 **−0.0231**（链式口径曾给 +0.0373，高估 1.6×） |
+| R18_ltr_itemcf_nograph | R13 − PageRank（LOO） | 0.8726 | 有 ItemCF 后 PageRank 边际 **−0.0002**（几乎归零） |
+| R19_ltr_itemcf_nocontent | R13 − 内容画像（LOO） | 0.8726 | −0.0002，与链式口径一致 |
+| **R20_ltr_itemcf_poslast** | **正样本置末行 + 早停开启** | **0.8726** | **根因实证：best_iter 1→261，test 0.8296→0.8726**；R20 ≈ R13 |
+| R15/R16 · R21/R22 · R26 | 轮数补格 · leaves 31/127 · ItemCF top_k 20 | 0.8204/0.8213 · 0.8726/0.8724 · 0.8711 | 轮数因子在低特征数下 ≤1.1e-4；叶子数不敏感（±4e-4）；邻居 20→50 值 +0.0017 |
+
 > `latency_ms` / `throughput_rps` 在 `outputs/leaderboard.csv` 中为**管线代理值**（该 run 阶段总耗时 / 测试用户数）；服务层**推理延迟**与吞吐写在 `outputs/top10/<run>_meta.json`（`latency_scope: inference_only`），R13 为 0.2504 ms/用户、40.3 万行/秒。
 
 详见 `docs/消融总表.md`、`docs/项目报告.md`。
@@ -129,7 +175,8 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 
 | 现象 | 处理 |
 |---|---|
-| Spark 报 `HADOOP_HOME unset` | 确认 `tools/hadoop/bin/winutils.exe` 存在；`get_spark` 会自动配置 |
+| Spark 报 `HADOOP_HOME unset` | 确认 `tools/hadoop/bin/winutils.exe` 存在；`get_spark` 会自动配置（WSL/Linux 下不需要 winutils，代码按 `os.name` 跳过） |
 | Python worker 连接超时 | 已固定 `SPARK_LOCAL_IP=127.0.0.1`、`spark.driver.host`；勿改本机名 |
-| 内存不足 | 用 `data.dev.max_users` 降采样冒烟；最终指标需全量 |
+| 内存不足 | 用 `data.dev.max_users` 降采样冒烟；最终指标需全量。WSL 侧把 `spark.driver_memory` 降到 6g 并把 `.wslconfig` 的 `memory` 提到 12GB |
+| WSL 里后台任务跑一会儿就消失 | DSH 的 bash 工具在调用结束时会回收整棵进程树，`setsid nohup` 也救不回来；长任务用 DSH 托管后台任务 |
 | 想跳过已完成阶段 | 默认命中缓存；需要重算加 `--force` |

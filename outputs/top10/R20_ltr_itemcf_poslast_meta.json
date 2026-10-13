@@ -1,0 +1,11 @@
+{
+  "run_id": "R20_ltr_itemcf_poslast",
+  "model": "lightgbm_lambdarank_itemcf_poslast",
+  "seed": 20260907,
+  "ndcg_at10": 0.8726374932320079,
+  "latency_ms": 0.10568500646098383,
+  "throughput_rps": 955670.0934421249,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-12T16:12:31.538822+00:00",
+  "n_rows": 1872780
+}

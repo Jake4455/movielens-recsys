@@ -1,0 +1,11 @@
+{
+  "run_id": "R17_ltr_itemcf_nostream",
+  "model": "lightgbm_lambdarank_itemcf_nostream",
+  "seed": 20260907,
+  "ndcg_at10": 0.8497305890006549,
+  "latency_ms": 0.14151741204519433,
+  "throughput_rps": 713693.0964208498,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-12T15:56:28.064885+00:00",
+  "n_rows": 1872780
+}

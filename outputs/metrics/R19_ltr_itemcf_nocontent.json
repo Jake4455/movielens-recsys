@@ -1,0 +1,74 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.8725538884809657,
+  "hr_at_k": 0.9870833733807495,
+  "recall_at_k": 0.9870833733807495,
+  "mrr_at_k": 0.8343214132728919,
+  "mean_rank": 1.8116756906844371,
+  "run_id": "R19_ltr_itemcf_nocontent",
+  "model": "lightgbm_lambdarank_itemcf_nocontent",
+  "seed": 20260907,
+  "pipeline_s": 288.76129437799955,
+  "throughput_rps": 65504.20145727509,
+  "latency_ms": 1.541885829504798,
+  "infer_s": 24.488764317999994,
+  "infer_latency_ms": 0.13076156472196412,
+  "infer_throughput_rps": 772398.2212567923,
+  "val_ndcg_at_k": 0.8913282545846805,
+  "n_features": 15,
+  "best_iteration": 300,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": {
+    "seed": 20260907,
+    "positive_threshold": 4.0,
+    "n_users": 200948,
+    "n_items": 71411,
+    "max_items": 20000,
+    "n_graph_items": 20000,
+    "top_k": 50,
+    "pagerank_iters": 20,
+    "damping": 0.85,
+    "lpa_iters": 5,
+    "community_method": "louvain",
+    "community_resolution": 1.0,
+    "n_communities": 16,
+    "graph_item_positive_coverage": 0.9961018562316895,
+    "topk_nnz": 1000000
+  },
+  "itemcf_sim": {
+    "feature": "itemcf_max_sim",
+    "top_k": 50,
+    "n_items": 71411,
+    "similarity_nnz": 3840988,
+    "source": "train positives, leave-one-out on training rows"
+  },
+  "stream": {
+    "mode": "ratio",
+    "features": [
+      "user_activity_ratio_7_30",
+      "user_activity_ratio_30_90",
+      "movie_recent_ratio_7_30"
+    ]
+  },
+  "significance": {
+    "mean_diff": 0.11852729436489447,
+    "se": 0.0005639595642520708,
+    "ci_low": 0.11738054359612558,
+    "ci_high": 0.1196234632065279,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.7540265941160711,
+    "model_ndcg": 0.8725538884809657,
+    "lift": 1.1571924588466824
+  }
+}

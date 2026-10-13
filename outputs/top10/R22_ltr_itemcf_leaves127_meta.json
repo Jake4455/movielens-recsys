@@ -1,0 +1,11 @@
+{
+  "run_id": "R22_ltr_itemcf_leaves127",
+  "model": "lightgbm_lambdarank_itemcf_leaves127",
+  "seed": 20260907,
+  "ndcg_at10": 0.8724192372214634,
+  "latency_ms": 0.16738723676566666,
+  "throughput_rps": 603391.2856892111,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-12T16:23:53.825186+00:00",
+  "n_rows": 1872780
+}

@@ -1,0 +1,11 @@
+{
+  "run_id": "R21_ltr_itemcf_leaves31",
+  "model": "lightgbm_lambdarank_itemcf_leaves31",
+  "seed": 20260907,
+  "ndcg_at10": 0.8726175186747863,
+  "latency_ms": 0.11492321462745464,
+  "throughput_rps": 878847.6751839098,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-12T16:18:04.590289+00:00",
+  "n_rows": 1872780
+}

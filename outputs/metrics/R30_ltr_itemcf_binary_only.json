@@ -1,0 +1,76 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.865293346305212,
+  "hr_at_k": 0.9870192975149243,
+  "recall_at_k": 0.9870192975149243,
+  "mrr_at_k": 0.8246406750884053,
+  "mean_rank": 1.8454970685291385,
+  "run_id": "R30_ltr_itemcf_binary_only",
+  "model": "lightgbm_lambdarank_itemcf_binary_only",
+  "seed": 20260907,
+  "pipeline_s": 348.9567598520007,
+  "throughput_rps": 54204.647040000746,
+  "latency_ms": 1.8633088769209447,
+  "infer_s": 26.60422510599892,
+  "infer_latency_ms": 0.14205739652281058,
+  "infer_throughput_rps": 710980.2268112251,
+  "val_ndcg_at_k": 0.8824634786143244,
+  "n_features": 17,
+  "best_iteration": 300,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": {
+    "seed": 20260907,
+    "positive_threshold": 4.0,
+    "n_users": 200948,
+    "n_items": 71411,
+    "max_items": 20000,
+    "n_graph_items": 20000,
+    "top_k": 50,
+    "pagerank_iters": 20,
+    "damping": 0.85,
+    "lpa_iters": 5,
+    "community_method": "louvain",
+    "community_resolution": 1.0,
+    "n_communities": 16,
+    "graph_item_positive_coverage": 0.9961018562316895,
+    "topk_nnz": 1000000
+  },
+  "itemcf_sim": {
+    "columns": [
+      "itemcf_has_neighbor"
+    ],
+    "top_k": 50,
+    "n_items": 71411,
+    "similarity_nnz": 3840988,
+    "source": "train positives, leave-one-out on training rows"
+  },
+  "stream": {
+    "mode": "ratio",
+    "features": [
+      "user_activity_ratio_7_30",
+      "user_activity_ratio_30_90",
+      "movie_recent_ratio_7_30"
+    ]
+  },
+  "significance": {
+    "mean_diff": 0.11126675218914066,
+    "se": 0.0005534356916481851,
+    "ci_low": 0.11027861753832979,
+    "ci_high": 0.1123242847187749,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.7540265941160711,
+    "model_ndcg": 0.865293346305212,
+    "lift": 1.1475634321884582
+  }
+}

@@ -28,6 +28,13 @@ def _graph_columns(cfg):
     return [name for name, key in mapping if bool(get(cfg, key, True))]
 
 
+def _itemcf_columns(cfg):
+    """ItemCF 召回特征的口径（默认只 max_sim，保持历史行为）。"""
+    from src.features.itemcf_sim import normalize_columns
+
+    return normalize_columns(get(cfg, "itemcf_sim.columns", None))
+
+
 def _raw_path(cfg, key):
     return path_of(cfg, "paths.raw_dir") / get(cfg, f"data.files.{key}")
 
@@ -365,6 +372,7 @@ def stage_ltr(cfg, force=False):
         ActivityContext = ActivityContextClass
         stream_context = ActivityContext.load(processed / "stream")
     itemcf_context = None
+    itemcf_columns = []
     if bool(get(cfg, "features.itemcf_sim", False)):
         from src.features.itemcf_sim import ItemCFContext
 
@@ -377,11 +385,13 @@ def stage_ltr(cfg, force=False):
             force=force,
             verbose=False,
         )
+        itemcf_columns = _itemcf_columns(cfg)
         logger.info(
-            "itemcf similarity: items=%d nnz=%d top_k=%d",
+            "itemcf similarity: items=%d nnz=%d top_k=%d columns=%s",
             itemcf_context.similarity.shape[0],
             itemcf_context.similarity.nnz,
             itemcf_context.top_k,
+            ",".join(itemcf_columns),
         )
     features_train = context.compute(train_groups, adjust_train=True)
     features_val = context.compute(val_groups)
@@ -395,11 +405,12 @@ def stage_ltr(cfg, force=False):
         features_val = pd.concat([features_val, graph_val], axis=1)
     if itemcf_context is not None:
         features_train = pd.concat(
-            [features_train, itemcf_context.compute(train_groups, adjust_train=True)],
+            [features_train, itemcf_context.compute(train_groups, adjust_train=True,
+                                                    columns=itemcf_columns)],
             axis=1,
         )
         features_val = pd.concat(
-            [features_val, itemcf_context.compute(val_groups)], axis=1
+            [features_val, itemcf_context.compute(val_groups, columns=itemcf_columns)], axis=1
         )
     if stream_context is not None:
         features_train = pd.concat(
@@ -460,7 +471,7 @@ def stage_ltr(cfg, force=False):
         features_test = pd.concat([features_test, graph_test], axis=1)
     if itemcf_context is not None:
         features_test = pd.concat(
-            [features_test, itemcf_context.compute(candidates)], axis=1
+            [features_test, itemcf_context.compute(candidates, columns=itemcf_columns)], axis=1
         )
     if stream_context is not None:
         features_test = pd.concat(
@@ -495,7 +506,7 @@ def stage_ltr(cfg, force=False):
             "graph": graph_context.meta if graph_context is not None else None,
             "itemcf_sim": (
                 {
-                    "feature": "itemcf_max_sim",
+                    "columns": list(itemcf_columns),
                     "top_k": int(itemcf_context.top_k),
                     "n_items": int(itemcf_context.similarity.shape[0]),
                     "similarity_nnz": int(itemcf_context.similarity.nnz),
@@ -869,6 +880,7 @@ def stage_seed(cfg, force=False):
         else None
     )
     itemcf_context = None
+    itemcf_columns = []
     if bool(get(cfg, "features.itemcf_sim", False)):
         from src.features.itemcf_sim import ItemCFContext
 
@@ -880,6 +892,7 @@ def stage_seed(cfg, force=False):
             block_size=int(get(cfg, "itemcf_sim.block_size", 500)),
             verbose=False,
         )
+        itemcf_columns = _itemcf_columns(cfg)
     model = lgb.Booster(model_file=str(model_path))
     train = splits[schema.TRAIN]
 
@@ -909,7 +922,7 @@ def stage_seed(cfg, force=False):
             )
         if itemcf_context is not None:
             features = pd.concat(
-                [features, itemcf_context.compute(candidates)], axis=1
+                [features, itemcf_context.compute(candidates, columns=itemcf_columns)], axis=1
             )
         if stream_context is not None:
             features = pd.concat(

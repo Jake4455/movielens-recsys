@@ -1,0 +1,11 @@
+{
+  "run_id": "R29_ltr_itemcf_top3mean",
+  "model": "lightgbm_lambdarank_itemcf_top3mean",
+  "seed": 20260907,
+  "ndcg_at10": 0.8749465756877258,
+  "latency_ms": 0.13443197793117442,
+  "throughput_rps": 751309.3354299177,
+  "latency_scope": "inference_only",
+  "generated_at": "2026-10-13T07:39:21.770221+00:00",
+  "n_rows": 1872780
+}

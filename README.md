@@ -132,6 +132,7 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 | `features.*` | bayes_rating / weighted_genre / graph / stream | 特征开关（用于消融） |
 | `ltr.run_id / params` | R07_ltr_content / 300 轮 | LightGBM LambdaRank |
 | `ltr.positive_row` | `first` | 正样本在训练组内的行序。**默认值禁止改动**；`last` 仅用于 R20 早停缺陷根因反事实实验（LightGBM 内部指标按行序打破并列，正样本置首会在高并列场景虚高内部 NDCG） |
+| `itemcf_sim.columns` | `[max_sim]` | ItemCF 召回特征口径：`max_sim`（默认，历史行为）/ `top3_mean`（Top-3 邻居均值）/ `has_neighbor`（是否存在相似度>0 的邻居，0/1）；可多选 |
 | `eval.bootstrap` | B=1000 | 配对检验 |
 | `scalability.parallelism` | [2,4,6,8] | 扩展性实验并行度 |
 
@@ -160,6 +161,14 @@ tools/hadoop/         Windows Spark 所需 winutils（第三方二进制）
 | R19_ltr_itemcf_nocontent | R13 − 内容画像（LOO） | 0.8726 | −0.0002，与链式口径一致 |
 | **R20_ltr_itemcf_poslast** | **正样本置末行 + 早停开启** | **0.8726** | **根因实证：best_iter 1→261，test 0.8296→0.8726**；R20 ≈ R13 |
 | R15/R16 · R21/R22 · R26 | 轮数补格 · leaves 31/127 · ItemCF top_k 20 | 0.8204/0.8213 · 0.8726/0.8724 · 0.8711 | 轮数因子在低特征数下 ≤1.1e-4；叶子数不敏感（±4e-4）；邻居 20→50 值 +0.0017 |
+
+**2026-10-13 E 组：ItemCF 召回特征的聚合口径（3 臂，详见 `docs/消融总表.md` §6.6）**
+
+| run | 内容 | test NDCG@10 | 关键结论 |
+|---|---|---|---|
+| **R29_ltr_itemcf_top3mean** | **R13 + Top-3 邻居均值（18 特征）** | **0.8749** | **显著优于 R13（+0.00216，p=0.001）——当前最高** |
+| R28_ltr_itemcf_binary | R13 + 二值命中（18） | 0.8726 | 不显著（−0.0002）：二值是 `max_sim` 的确定性函数 |
+| R30_ltr_itemcf_binary_only | 二值命中替换 `max_sim`（17） | 0.8653 | −0.0075：相似度强度是有效信息，不能只保留"命中与否" |
 
 > `latency_ms` / `throughput_rps` 在 `outputs/leaderboard.csv` 中为**管线代理值**（该 run 阶段总耗时 / 测试用户数）；服务层**推理延迟**与吞吐写在 `outputs/top10/<run>_meta.json`（`latency_scope: inference_only`），R13 为 0.2504 ms/用户、40.3 万行/秒。
 

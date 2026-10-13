@@ -22,7 +22,47 @@ from scipy import sparse
 from src.data import schema
 from src.recall.itemcf import build_incidence, exact_topk
 
-FEATURE_NAME = "itemcf_max_sim"
+FEATURE_MAX_SIM = "itemcf_max_sim"
+FEATURE_TOP3_MEAN = "itemcf_top3_mean_sim"
+FEATURE_HAS_NEIGHBOR = "itemcf_has_neighbor"
+FEATURE_NAME = FEATURE_MAX_SIM  # 历史别名：默认单列输出的列名
+COLUMN_ALIASES = {
+    "max_sim": FEATURE_MAX_SIM,
+    "top3_mean": FEATURE_TOP3_MEAN,
+    "has_neighbor": FEATURE_HAS_NEIGHBOR,
+}
+DEFAULT_COLUMNS = ("max_sim",)
+
+
+def normalize_columns(columns=None):
+    """把配置里的列名/别名规范化为特征名列表；缺省只产出 max_sim（保持历史行为）。
+
+    可选项：
+      - ``max_sim``      → ``itemcf_max_sim``（历史默认，余弦相似度最大值）
+      - ``top3_mean``    → ``itemcf_top3_mean_sim``（相似度最高的 3 个邻居均值）
+      - ``has_neighbor`` → ``itemcf_has_neighbor``（是否存在相似度 > 0 的邻居，0/1）
+    """
+    if columns is None:
+        requested = list(DEFAULT_COLUMNS)
+    elif isinstance(columns, str):
+        requested = [columns]
+    else:
+        requested = list(columns)
+    resolved = []
+    known = set(COLUMN_ALIASES.values())
+    for name in requested:
+        key = str(name).strip()
+        if key in COLUMN_ALIASES:
+            feature = COLUMN_ALIASES[key]
+        elif key in known:
+            feature = key
+        else:
+            raise ValueError(
+                f"unknown itemcf_sim column: {name!r}（可选 {sorted(COLUMN_ALIASES)}）"
+            )
+        if feature not in resolved:
+            resolved.append(feature)
+    return resolved or [FEATURE_MAX_SIM]
 
 
 class ItemCFContext:
@@ -121,8 +161,13 @@ class ItemCFContext:
         return context, True
 
     # ---------------------------------------------------------------- compute
-    def compute(self, frame, adjust_train=False, leave_one_user_out=True):
-        """返回单列 DataFrame：候选电影与该用户训练期正反馈的最大余弦相似度。
+    def compute(self, frame, adjust_train=False, leave_one_user_out=True, columns=None):
+        """返回候选电影的 ItemCF 召回相似度特征（默认单列 ``itemcf_max_sim``）。
+
+        ``columns`` 可选 ``max_sim`` / ``top3_mean`` / ``has_neighbor``（见
+        :func:`normalize_columns`）。三种口径在**同一次遍历**里算出，避免重复扫描；
+        所有口径都建立在同一份 LOO 校正后的 block 上（自身相似度按 -inf 剔除后视为 0），
+        因此 ``has_neighbor == (max_sim > 0)``、``top3_mean <= max_sim`` 恒成立。
 
         ``leave_one_user_out``（默认开启）会从相似度统计中扣除**该用户自己**的贡献：
         否则训练组的正样本与用户其它正反馈物品天然共现，余弦相似度被自身边抬高
@@ -134,9 +179,11 @@ class ItemCFContext:
 
         其中 cooc = sim · sqrt(c_i · c_j) 由已存的归一化相似度反推。
         """
+        wanted = normalize_columns(columns)
         user_codes = self.user_index.get_indexer(frame[schema.USER].to_numpy())
         item_codes = self.item_index.get_indexer(frame[schema.MOVIE].to_numpy())
-        values = np.zeros(len(frame), dtype=np.float32)
+        values = {name: np.zeros(len(frame), dtype=np.float32) for name in wanted}
+        need_block_stats = FEATURE_TOP3_MEAN in values or FEATURE_HAS_NEIGHBOR in values
 
         order = np.argsort(user_codes, kind="stable")
         codes_sorted = user_codes[order]
@@ -183,11 +230,28 @@ class ItemCFContext:
 
             if adjust_train or leave_one_user_out:
                 # 自身相似度（i == j）不参与：训练正样本本身就是用户的历史物品
-                columns = np.flatnonzero(in_history)
-                if columns.size:
-                    block[slot[columns], columns] = -np.inf
+                self_columns = np.flatnonzero(in_history)
+                if self_columns.size:
+                    block[slot[self_columns], self_columns] = -np.inf
             best = block.max(axis=0)
             best[~np.isfinite(best)] = 0.0  # 除自身外无其它正反馈可比 → 0
-            values[known_rows] = best.astype(np.float32)
+            if FEATURE_MAX_SIM in values:
+                values[FEATURE_MAX_SIM][known_rows] = best.astype(np.float32)
+            if need_block_stats:
+                # 自身（-inf）与无共现统一视为 0，供二值/均值口径使用
+                finite = np.where(np.isfinite(block), block, 0.0)
+                if FEATURE_HAS_NEIGHBOR in values:
+                    values[FEATURE_HAS_NEIGHBOR][known_rows] = (best > 0.0).astype(
+                        np.float32
+                    )
+                if FEATURE_TOP3_MEAN in values:
+                    top_k = min(3, finite.shape[0])
+                    if top_k > 0:
+                        top = np.partition(finite, finite.shape[0] - top_k, axis=0)[
+                            -top_k:
+                        ]
+                        values[FEATURE_TOP3_MEAN][known_rows] = top.mean(axis=0).astype(
+                            np.float32
+                        )
 
-        return pd.DataFrame({FEATURE_NAME: values}, index=frame.index)
+        return pd.DataFrame({name: values[name] for name in wanted}, index=frame.index)

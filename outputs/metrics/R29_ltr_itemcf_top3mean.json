@@ -1,0 +1,77 @@
+{
+  "k": 10,
+  "n_users": 187278,
+  "ndcg_at_k": 0.8749465756877258,
+  "hr_at_k": 0.9871794871794872,
+  "recall_at_k": 0.9871794871794872,
+  "mrr_at_k": 0.8374850976995916,
+  "mean_rank": 1.80173325217057,
+  "run_id": "R29_ltr_itemcf_top3mean",
+  "model": "lightgbm_lambdarank_itemcf_top3mean",
+  "seed": 20260907,
+  "pipeline_s": 349.3262760419966,
+  "throughput_rps": 54147.30954199963,
+  "latency_ms": 1.865281966071811,
+  "infer_s": 25.17615196299448,
+  "infer_latency_ms": 0.13443197793117442,
+  "infer_throughput_rps": 751309.3354299177,
+  "val_ndcg_at_k": 0.8949145248630448,
+  "n_features": 18,
+  "best_iteration": 300,
+  "ltr": {
+    "num_negatives": 100,
+    "hard_ratio": 0.0,
+    "hard_negative_source": "popular",
+    "max_train_users": 100000,
+    "train_groups": 100000,
+    "val_groups": 20000
+  },
+  "graph": {
+    "seed": 20260907,
+    "positive_threshold": 4.0,
+    "n_users": 200948,
+    "n_items": 71411,
+    "max_items": 20000,
+    "n_graph_items": 20000,
+    "top_k": 50,
+    "pagerank_iters": 20,
+    "damping": 0.85,
+    "lpa_iters": 5,
+    "community_method": "louvain",
+    "community_resolution": 1.0,
+    "n_communities": 16,
+    "graph_item_positive_coverage": 0.9961018562316895,
+    "topk_nnz": 1000000
+  },
+  "itemcf_sim": {
+    "columns": [
+      "itemcf_max_sim",
+      "itemcf_top3_mean_sim"
+    ],
+    "top_k": 50,
+    "n_items": 71411,
+    "similarity_nnz": 3840988,
+    "source": "train positives, leave-one-out on training rows"
+  },
+  "stream": {
+    "mode": "ratio",
+    "features": [
+      "user_activity_ratio_7_30",
+      "user_activity_ratio_30_90",
+      "movie_recent_ratio_7_30"
+    ]
+  },
+  "significance": {
+    "mean_diff": 0.12091998157165461,
+    "se": 0.0005670217498566241,
+    "ci_low": 0.11979624656056093,
+    "ci_high": 0.12198567347202248,
+    "p_one_sided": 0.000999000999000999,
+    "n_users": 187278,
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "baseline_ndcg": 0.7540265941160711,
+    "model_ndcg": 0.8749465756877258,
+    "lift": 1.1603656721330984
+  }
+}

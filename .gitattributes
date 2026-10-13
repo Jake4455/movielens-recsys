@@ -1,0 +1,14 @@
+# 统一行尾为 LF。
+# 背景：仓库历史中所有文本文件都以 LF 存储，但 Windows 侧工具（编辑器 / 文件工具）
+# 会把工作区文件写成 CRLF，导致 git 显示"整文件重写"的假 diff（2026-10-13 实测：
+# 71 个"已修改"文件里 57 个是纯行尾差异、零内容改动）。
+* text=auto eol=lf
+
+# 二进制文件（显式声明，避免被当文本处理）
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.parquet binary
+*.npz binary
+*.xlsx binary
